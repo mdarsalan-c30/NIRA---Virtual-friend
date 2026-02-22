@@ -10,15 +10,31 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Initialize Firebase Admin using the JSON file (most reliable method)
-const serviceAccount = require('./serviceAccountKey.json');
+// Initialize Firebase Admin
+let serviceAccount;
+try {
+    // Try environment variables first (Production/Render)
+    if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY) {
+        serviceAccount = {
+            projectId: process.env.FIREBASE_PROJECT_ID,
+            privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        };
+        console.log("ℹ️ Initializing Firebase via Environment Variables");
+    } else {
+        // Fallback to local JSON file (Development)
+        serviceAccount = require('./serviceAccountKey.json');
+        console.log("ℹ️ Initializing Firebase via serviceAccountKey.json");
+    }
 
-admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    databaseURL: "https://nira---virtual-friend-default-rtdb.asia-southeast1.firebasedatabase.app"
-});
-
-console.log("✅ Firebase Admin initialized successfully.");
+    admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        databaseURL: process.env.FIREBASE_DATABASE_URL || "https://nira---virtual-friend-default-rtdb.asia-southeast1.firebasedatabase.app"
+    });
+    console.log("✅ Firebase Admin initialized successfully.");
+} catch (error) {
+    console.error("❌ Firebase Initialization Error:", error.message);
+}
 
 const db = admin.firestore();
 
