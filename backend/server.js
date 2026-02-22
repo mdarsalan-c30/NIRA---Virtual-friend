@@ -15,9 +15,20 @@ let serviceAccount;
 try {
     // Try environment variables first (Production/Render)
     if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY) {
+        // Clean up private key: handle escaped newlines, remove unwanted quotes, and trim
+        let privateKey = process.env.FIREBASE_PRIVATE_KEY.trim();
+
+        // Remove leading/trailing quotes if they exist (even if mismatched)
+        if (privateKey.startsWith('"')) privateKey = privateKey.substring(1);
+        if (privateKey.endsWith('"')) privateKey = privateKey.substring(0, privateKey.length - 1);
+        if (privateKey.startsWith("'")) privateKey = privateKey.substring(1);
+        if (privateKey.endsWith("'")) privateKey = privateKey.substring(0, privateKey.length - 1);
+
+        privateKey = privateKey.replace(/\\n/g, '\n');
+
         serviceAccount = {
             projectId: process.env.FIREBASE_PROJECT_ID,
-            privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+            privateKey: privateKey.trim(),
             clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
         };
         console.log("ℹ️ Initializing Firebase via Environment Variables");
