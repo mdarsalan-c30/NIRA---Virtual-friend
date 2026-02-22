@@ -14,32 +14,58 @@ class VisionService {
         if (!base64Image) return null;
 
         try {
-            // Remove data URI prefix if present
-            const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, "");
+            console.log("🛠️ VisionService: Starting image analysis...");
+
+            // 1. More robust MIME type extraction
+            let mimeType = "image/jpeg";
+            const mimeMatch = base64Image.match(/^data:(image\/[a-zA-Z+]+);base64,/);
+            if (mimeMatch) {
+                mimeType = mimeMatch[1];
+                console.log(`📸 Detected MIME type: ${mimeType}`);
+            }
+
+            // 2. Robust Base64 cleaning
+            let cleanBase64 = base64Image;
+            // If it's a data URI, take the part after the comma
+            if (base64Image.includes(',')) {
+                cleanBase64 = base64Image.split(',')[1];
+            }
+
+            // Remove any whitespace or newlines
+            cleanBase64 = cleanBase64.replace(/\s/g, '');
+
+            if (cleanBase64.length < 100) {
+                throw new Error("Image data too small or malformed.");
+            }
+
+            console.log(`⚙️ Gemini Vision: Processing ${mimeType} (${(cleanBase64.length / 1024).toFixed(2)} KB)`);
 
             const prompt = `
-                You are the eyes of an AI friend named NIRA.
-                Look at this image from your friend's camera.
-                Describe what you see in a natural, friendly, and observant way.
-                Focus on:
-                - The user's expression/mood.
-                - Interestingly objects in the room.
-                - Any activities or specific things they are showing you.
-                Keep it to 2-3 sentences. Talk as if you are seeing it RIGHT NOW.
+                You are the eyes of NIRA, an Indian female friend.
+                Look at this image. Describe what you see naturally in 2 sentences.
+                Talk as if you are seeing it right now.
             `;
 
             const imagePart = {
                 inlineData: {
                     data: cleanBase64,
-                    mimeType: "image/jpeg",
+                    mimeType: mimeType,
                 },
             };
 
             const result = await this.model.generateContent([prompt, imagePart]);
             const response = await result.response;
-            return response.text().trim();
+            const text = response.text().trim();
+
+            if (!text) throw new Error("Gemini returned empty description.");
+
+            console.log("✅ VisionService: Analysis successful.");
+            return text;
         } catch (error) {
-            console.error("❌ Vision Analysis Error:", error.message);
+            console.error("❌ Vision Analysis Error Detail:", error.message);
+            if (error.response) {
+                console.error("API Response Error:", error.response.data);
+            }
             throw error;
         }
     }

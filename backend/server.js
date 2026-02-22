@@ -33,7 +33,7 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-app.use(express.json({ limit: '10mb' })); // Increase limit for gallery uploads
+app.use(express.json({ limit: '20mb' })); // Increase limit for gallery uploads
 
 // Initialize Firebase Admin
 let serviceAccount;
