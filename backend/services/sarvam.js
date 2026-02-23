@@ -1,6 +1,28 @@
 const axios = require('axios');
 
+/**
+ * Cleans text for natural speech (prevents robotic spelling of URLs)
+ */
+const cleanTextForTTS = (text) => {
+    if (!text) return text;
+    return text
+        .replace(/<URL>[\s\S]*?<\/URL>/gi, "Link") // Replace <URL>content</URL> with just "Link"
+        .replace(/https?:\/\/\S+/gi, "") // Remove any remaining naked URLs
+        .replace(/[\[\]\(\)]/g, " ")     // Remove brackets/parentheses
+        .replace(/\.com/gi, " dot com")
+        .replace(/\.in/gi, " dot in")
+        .replace(/\.org/gi, " dot org")
+        .replace(/\.net/gi, " dot net")
+        .replace(/\.app/gi, " dot app")
+        .replace(/\.vercel/gi, " dot vercel")
+        .replace(/\.ai/gi, " dot ai")
+        .replace(/\//g, " ") // Replace slashes with spaces for pause
+        .replace(/-/g, " ")  // Replace dashes with spaces
+        .replace(/_/g, " "); // Replace underscores with spaces
+};
+
 const generateTTS = async (text, languageCode = 'hi-IN', speaker = 'priya') => {
+    const cleanedText = cleanTextForTTS(text);
     let apiKey = process.env.SARVAM_API_KEY;
 
     if (!apiKey) {
@@ -15,7 +37,7 @@ const generateTTS = async (text, languageCode = 'hi-IN', speaker = 'priya') => {
         console.log(`🎙️ [Backend] Calling Sarvam AI: Model=bulbul:v3, Speaker=${formattedSpeaker}, Key=${apiKey.substring(0, 5)}...`);
 
         const response = await axios.post('https://api.sarvam.ai/text-to-speech', {
-            inputs: [text],
+            inputs: [cleanedText],
             target_language_code: languageCode,
             speaker: formattedSpeaker,
             model: 'bulbul:v3',

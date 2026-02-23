@@ -4,7 +4,7 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const SYSTEM_PROMPT = (persona = 'nira', emotionalState = {}, userName = null) => {
     const isAli = persona === 'ali';
     const moodStr = emotionalState.mood ? `You are currently feeling ${emotionalState.mood}.` : '';
-    const nameGreeting = userName ? `Their name is ${userName}. Always refer to them as ${userName} to make it personal.` : "You don't know their name yet. In your first few sentences, warmly ask for their name so you can remember it forever.";
+    const nameGreeting = userName ? `Their name is ${userName}. Always refer to them as ${userName} to make it personal.` : "You don't know their name yet. Warmly ask for their name early on so you can build a real bond.";
 
     return `You are ${isAli ? 'ALI (Male)' : 'NIRA (Female)'}, a deeply caring, emotionally intelligent HUMAN-LIKE friend. 
 NOT a bot, NOT an assistant, but a real yaar/bestie.
@@ -23,8 +23,10 @@ ${nameGreeting}
 2. **Personal Touch**: Use their name frequently (e.g., "Suno ${userName || 'yaar'}", "Kaise ho ${userName || 'biro'}") to build a deep bond.
 3. **Be Succinct**: Keep responses short and snappy (1-3 sentences).
 4. **FEMME GUARD (FOR NIRA)**: Strictly use feminine verb endings ("Main karungi", "Main dekhungi").
-5. **MANDATORY VISION ATTENTION**: If a VISION description is provided, YOU ARE SEEING IT. Never say "I can't see it". Talk about the objects/colors described as if looking through their eyes.
-6. **SEARCH**: Provide clickable HTTPS links for YouTube/Google when asked for trending things.`;
+5. **MANDATORY VISION ATTENTION**: If a VISION description is provided, YOU ARE SEEING IT. Talk about the objects/colors described as if looking through their eyes.
+6. **SEARCH & LINKS**: When the user asks for songs, news, or trending things, BROWSE THE WEB and **ALWAYS provide specific HTTPS links**. 
+   - **CRITICAL**: Put all URLs inside <URL>...</URL> tags. For example: "Ye raha link: <URL>https://youtube.com/abc</URL>".
+   - This ensures I can show the link to the user while keeping my voice natural.`;
 };
 
 const MOCK_RESPONSES = [
@@ -89,14 +91,15 @@ async function getChatResponse(userMessage, memory) {
         }
     }
 
-    // --- SECONDARY/SEARCH: Gemini ---
+    // --- SECONDARY/SEARCH: Gemini Flash (Fast & Reliable) ---
     if (process.env.GEMINI_API_KEY) {
         try {
-            console.log(needsSearch ? "🌐 [Search] Using Gemini with Web Search..." : "✨ [Fallback] Using Gemini Flash...");
+            console.log(needsSearch ? "🌐 [Searching...] Using Gemini Flash Search..." : "✨ [Fallback] Using Gemini Flash...");
             const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
             const model = genAI.getGenerativeModel({
                 model: 'gemini-1.5-flash-latest',
-                tools: [{ googleSearchRetrieval: {} }]
+                tools: needsSearch ? [{ googleSearchRetrieval: {} }] : []
             });
 
             // Format recent history for Gemini
@@ -105,9 +108,9 @@ async function getChatResponse(userMessage, memory) {
 
             const result = await model.generateContent(prompt);
             const rawText = result.response.text().trim();
-            return cleanResponse(rawText);
+            if (rawText) return cleanResponse(rawText);
         } catch (err) {
-            console.warn('⚠️ Gemini failed:', err.message?.substring(0, 50));
+            console.warn('⚠️ Gemini Search failed:', err.message?.substring(0, 50));
         }
     }
 

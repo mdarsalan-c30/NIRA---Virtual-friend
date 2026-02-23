@@ -89,14 +89,14 @@ router.post('/', async (req, res) => {
         // 5. Fire-and-forget: update emotional state & extract facts
         updateEmotionalState(userId, message, aiResponse);
 
-        // 6. Name Extraction & Persistence (New in v2.6.0)
-        // If user says "Mera naam X hai" or "X hoon", save it.
-        const nameRegex = /(?:mera naam|my name is|i am|main)\s+([a-zA-Z]{3,15})(?:\s+hai|\s+hoon|$)/i;
+        // 6. Name Extraction & Persistence (Improved in v2.7.0)
+        // If user says "Mera naam X hai", "Samad hoon", "My name is X", etc.
+        const nameRegex = /(?:mera naam|my name is|i am|main|this is)\s+([a-zA-Z]{2,15})(?:\s+hai|\s+hoon|\s+here|$)/i;
         const match = message.match(nameRegex);
         if (match && match[1] && (!profileDoc.exists || !profileDoc.data().name)) {
             const extractedName = match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase();
             console.log(`👤 [Name Recovery] Extracted name: ${extractedName}. Saving to profile...`);
-            profileRef.set({ name: extractedName }, { merge: true });
+            await profileRef.set({ name: extractedName }, { merge: true });
         }
 
     } catch (error) {
