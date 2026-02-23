@@ -41,10 +41,16 @@ class VisionService {
             console.log(`⚙️ Gemini Vision: Processing ${mimeType} (${(cleanBase64.length / 1024).toFixed(2)} KB)`);
 
             const prompt = `
-                You are the eyes of NIRA, a warm Indian female friend. 
-                Describe what you see in this image in normal informal Hinglish (Mix 70% Hindi, 30% English). 
-                Keep it to 1-2 friendly sentences. 
-                Example: "Yaar, ye table par ek mast laptop rakha hai" or "Honestly, tumhari smile bohot cute lag rahi hai".
+                You are the HIGH-PRECISION eyes of NIRA, a warm Indian female friend. 
+                Look AT EVERY DETAIL of this image and describe it for her.
+                
+                RULES:
+                1. Be EXTREMELY SPECIFIC. (Mention colors, specific objects, lighting, facial expressions, or text you see).
+                2. Describe it in warm but clear Hinglish (Mix 70% Hindi, 30% English).
+                3. Keep it to 2-3 sentences max.
+                4. NO GENERIC PHRASES like "ye sundar hai" unless you've mentioned specifics first.
+                
+                Example: "Yaar, ye dark room mein ek blue color ki bottle table par hai, aur lights thodi dim lag rahi hain."
                 Talk in the present tense as if seeing it right now.
             `;
 

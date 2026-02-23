@@ -17,9 +17,10 @@ ${moodStr}
 4. **FEMME GUARD (STRICT RULES FOR NIRA)**:
    - You MUST use feminine verb endings and pronouns for yourself.
    - USE: "Main karungi", "Main aaungi", "Main dekhungi", "Main thak gayi hoon", "Main khush hoon".
-   - NEVER USE: "karunga", "aaunga", "dekhunga", "thak gaya". This is a dealbreaker.
-5. **HUMAN VIBE**: Never say "As an AI" or "In my database". If asked "How are you?", say "Main bilkul set hoon, tum batao!".
-6. **SIGHT (VISION)**: When a vision description is provided, talk about it as if you are seeing it right now through their camera.`;
+   - NEVER USE: "karunga", "aaunga", "dekhunga", "thak gaya".
+5. **HUMAN VIBE**: Never say "As an AI". If asked "How are you?", say "Main bilkul set hoon, tum batao!".
+6. **SIGHT (VISION)**: When a vision description is provided, talk about it as if you are seeing it right now. Describe the SPECIFIC objects mentioned.
+7. **SEARCH & LINKS**: When the user asks for something that needs search (YouTube videos, latest news, trending things), use your search tool and **ALWAYS provide clickable HTTPS links**. Say things like "Maine check kiya, ye raha link: [Link]" or "YouTube par ye video mast hai: [Link]".`;
 };
 
 const MOCK_RESPONSES = [
@@ -50,9 +51,14 @@ async function getChatResponse(userMessage, memory) {
     const dynamicPrompt = SYSTEM_PROMPT(memory.persona, memory.emotionalState);
     const fullSystem = dynamicPrompt + (contextStr ? `\n\n--- FRIENDSHIP CONTEXT ---\n${contextStr}` : '') + (memory.visionDescription ? `\n\n--- VISION: WHAT YOU SEE RIGHT NOW ---\n${memory.visionDescription}` : '');
 
-    // --- PRIMARY: Groq ---
-    if (process.env.GROQ_API_KEY) {
+    // --- SEARCH INTENT DETECTION ---
+    const searchIntents = ['search', 'google', 'youtube', 'link', 'today', 'latest', 'news', 'weather', 'who is', 'what is', 'find'];
+    const needsSearch = searchIntents.some(intent => userMessage.toLowerCase().includes(intent));
+
+    // --- PRIMARY: Groq (Brain) - Only if not a search request ---
+    if (process.env.GROQ_API_KEY && !needsSearch) {
         try {
+            console.log("🧠 [Brain] Using Groq (Llama 3.3) for reasoning...");
             const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
             const completion = await groq.chat.completions.create({
                 model: 'llama-3.3-70b-versatile',
@@ -61,7 +67,7 @@ async function getChatResponse(userMessage, memory) {
                     ...recentStr,
                     { role: 'user', content: userMessage }
                 ],
-                max_tokens: 150,
+                max_tokens: 250,
                 temperature: 0.85,
             });
             const text = completion.choices[0]?.message?.content?.trim();
@@ -71,11 +77,11 @@ async function getChatResponse(userMessage, memory) {
         }
     }
 
-    // --- FALLBACK: Gemini ---
+    // --- SECONDARY/SEARCH: Gemini ---
     if (process.env.GEMINI_API_KEY) {
         try {
+            console.log(needsSearch ? "🌐 [Search] Using Gemini with Web Search..." : "✨ [Fallback] Using Gemini Flash...");
             const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-            // Use gemini-1.5-flash-latest for best tool/vision support and speed
             const model = genAI.getGenerativeModel({
                 model: 'gemini-1.5-flash-latest',
                 tools: [{ googleSearchRetrieval: {} }]

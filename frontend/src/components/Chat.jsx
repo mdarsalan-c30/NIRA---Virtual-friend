@@ -74,9 +74,21 @@ const Chat = () => {
     useEffect(() => { localStorage.setItem('nira_voice', selectedVoice); }, [selectedVoice]);
     useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-    const handleSend = async (text = input) => {
-        if (!text.trim() || loading) return;
-        const userMsg = { role: 'user', content: text };
+    const VERSION = "2.4.0";
+    useEffect(() => {
+        console.log(`%c 🚀 NIRA SYSTEM v${VERSION} ACTIVE `, 'background: #6366f1; color: white; font-weight: bold; font-size: 1.2rem; padding: 4px; border-radius: 4px;');
+    }, []);
+
+    const handleSend = async (textOverride = null, imageOverride = null) => {
+        const textToSubmit = (textOverride !== null ? textOverride : input).trim();
+        if ((!textToSubmit && !imageOverride) || loading) return;
+
+        // Add user message with image to history
+        const userMsg = {
+            role: 'user',
+            content: textToSubmit,
+            image: imageOverride || null // Store the image if provided
+        };
         setMessages(prev => [...prev, userMsg]);
         setInput('');
         setLoading(true);
@@ -84,9 +96,9 @@ const Chat = () => {
         try {
             const token = await auth.currentUser.getIdToken();
 
-            // Capture snapshot if camera is on to send in the SAME request (Parallel processing)
-            let snapshot = null;
-            if (isCameraOn && videoRef.current) {
+            // Capture snapshot if camera is on AND no image was provided
+            let snapshot = imageOverride;
+            if (!snapshot && isCameraOn && videoRef.current) {
                 try {
                     snapshot = cameraService.takeSnapshot(videoRef.current);
                     setVisionLoading(true);
@@ -96,9 +108,9 @@ const Chat = () => {
             }
 
             const response = await axios.post(`${API_URL}/chat`, {
-                message: text,
+                message: textToSubmit,
                 persona: persona,
-                image: snapshot // Send image directly to chat route for internal parallel processing
+                image: snapshot
             }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -182,7 +194,6 @@ const Chat = () => {
         const reader = new FileReader();
         reader.onload = async (event) => {
             const rawBase64 = event.target.result;
-            setLoading(true);
             setVisionLoading(true);
             try {
                 // Compress before sending
@@ -589,9 +600,17 @@ const Chat = () => {
                                     maxWidth: '85%', padding: '12px 16px', borderRadius: '20px',
                                     background: msg.role === 'user' ? '#6366f1' : 'rgba(255,255,255,0.08)',
                                     color: 'white', fontSize: '0.9rem', lineHeight: 1.4,
-                                    border: '1px solid rgba(255,255,255,0.05)'
+                                    border: '1px solid rgba(255,255,255,0.05)',
+                                    display: 'flex', flexDirection: 'column', gap: '8px'
                                 }}>
-                                    {msg.content}
+                                    {msg.image && (
+                                        <img
+                                            src={msg.image}
+                                            alt="Uploaded context"
+                                            style={{ width: '100%', maxHeight: '200px', objectFit: 'cover', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}
+                                        />
+                                    )}
+                                    {msg.content && <div>{msg.content}</div>}
                                 </div>
                             </div>
                         ))}
