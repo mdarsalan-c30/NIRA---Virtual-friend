@@ -164,6 +164,9 @@ app.use('/api', (req, res) => {
     res.status(404).json({ error: 'API Endpoint not found', path: req.originalUrl });
 });
 
+// Health Check for TTS (Prevent console errors in some environments)
+app.get('/api/tts-health', (req, res) => res.json({ status: 'ok' }));
+
 app.listen(PORT, () => {
-    console.log(`🚀 NIRA Backend v2.9.0 running on port ${PORT}`);
+    console.log(`🚀 NIRA Backend v2.9.1 running on port ${PORT}`);
 });
