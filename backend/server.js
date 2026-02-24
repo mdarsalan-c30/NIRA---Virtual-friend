@@ -165,12 +165,6 @@ app.use('/api/chat', authenticate, chatRoutes);
 app.use('/api/memory', authenticate, memoryRoutes);
 app.use('/api/admin', authenticate, adminRoutes); // Primary Admin Check is inside the route
 
-// Catch-all 404 handler for API routes
-app.use('/api', (req, res) => {
-    console.warn(`🚨 404 - NOT FOUND: ${req.method} ${req.originalUrl}`);
-    res.status(404).json({ error: 'API Endpoint not found', path: req.originalUrl });
-});
-
 // Health Check for AI Keys (Debug Deployment)
 app.get('/api/health-ai', (req, res) => {
     res.json({
@@ -184,6 +178,12 @@ app.get('/api/health-ai', (req, res) => {
 
 // Health Check for TTS (Prevent console errors in some environments)
 app.get('/api/tts-health', (req, res) => res.json({ status: 'ok' }));
+
+// Catch-all 404 handler for API routes
+app.use('/api', (req, res) => {
+    console.warn(`🚨 404 - NOT FOUND: ${req.method} ${req.originalUrl}`);
+    res.status(404).json({ error: 'API Endpoint not found', path: req.originalUrl });
+});
 
 app.listen(PORT, () => {
     console.log(`🚀 NIRA Backend v3.0.0 (Super Admin) running on port ${PORT}`);
