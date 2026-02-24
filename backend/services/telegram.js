@@ -127,8 +127,12 @@ class TelegramService {
             }
         });
 
-        this.bot.launch();
-        console.log("🚀 [Telegram] Bot is running with Governance...");
+        try {
+            this.bot.launch();
+            console.log("🚀 [Telegram] Bot is running with Governance...");
+        } catch (err) {
+            console.error("❌ [Telegram] Failed to launch bot:", err.message);
+        }
 
         // Enable graceful stop
         process.once('SIGINT', () => this.bot.stop('SIGINT'));

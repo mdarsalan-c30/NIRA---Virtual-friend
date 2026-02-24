@@ -5,6 +5,10 @@ const path = require('path');
 dotenv.config(); // Loads from .env in the current working directory
 dotenv.config({ path: path.join(__dirname, '../.env') }); // Fallback to root .env if it exists
 
+console.log("🎬 [NYRA] System Booting Up...");
+console.log(`ℹ️ Node Version: ${process.version}`);
+console.log(`ℹ️ Environment: ${process.env.NODE_ENV || 'development'}`);
+
 
 
 const express = require('express');
@@ -15,6 +19,13 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+const PORT = process.env.PORT || 5000;
+
+// Start listening IMMEDIATELY to pass Render's health check
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 NYRA Backend is now Listening on Port ${PORT} (Binding: 0.0.0.0)`);
+});
 
 // Initialize Firebase Admin
 let serviceAccount;
@@ -52,14 +63,17 @@ try {
             privateKey: privateKey.trim(),
             clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
         };
-        console.log("ℹ️ Initializing Firebase via Environment Variables");
     } else {
         // Fallback to local JSON file (Development)
-        serviceAccount = require('./serviceAccountKey.json');
-        console.log("ℹ️ Initializing Firebase via serviceAccountKey.json");
+        try {
+            serviceAccount = require('./serviceAccountKey.json');
+            console.log("ℹ️ Initializing Firebase via serviceAccountKey.json");
+        } catch (e) {
+            console.warn("⚠️ Firebase serviceAccountKey.json not found. Expecting Environment Variables.");
+        }
     }
 
-    if (!admin.apps.length) {
+    if (serviceAccount && !admin.apps.length) {
         admin.initializeApp({
             credential: admin.credential.cert(serviceAccount),
             databaseURL: process.env.FIREBASE_DATABASE_URL || "https://nira---virtual-friend-default-rtdb.asia-southeast1.firebasedatabase.app"
@@ -110,6 +124,4 @@ app.get('/api/tts-health', (req, res) => res.json({ status: 'TTS Backend is Reac
 const ttsRoutes = require('./routes/tts');
 app.use('/api/tts', authenticate, ttsRoutes);
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 NYRA Backend running on port ${PORT}`);
-});
+console.log("✅ [NYRA] All routes Loaded.");
