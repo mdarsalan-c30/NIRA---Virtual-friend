@@ -171,6 +171,17 @@ app.use('/api', (req, res) => {
     res.status(404).json({ error: 'API Endpoint not found', path: req.originalUrl });
 });
 
+// Health Check for AI Keys (Debug Deployment)
+app.get('/api/health-ai', (req, res) => {
+    res.json({
+        groq: !!process.env.GROQ_API_KEY,
+        gemini: !!process.env.GEMINI_API_KEY,
+        sarvam: !!process.env.SARVAM_API_KEY,
+        firebase: !!process.env.FIREBASE_PROJECT_ID,
+        env: process.env.NODE_ENV || 'development'
+    });
+});
+
 // Health Check for TTS (Prevent console errors in some environments)
 app.get('/api/tts-health', (req, res) => res.json({ status: 'ok' }));
 
