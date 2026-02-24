@@ -24,7 +24,7 @@ const Chat = () => {
     const [searching, setSearching] = useState(false);
 
     const messagesEndRef = useRef(null);
-    const { speak, listen, isListening } = useVoice();
+    const { speak, stop, listen, isListening } = useVoice();
 
     const voices = {
         female: ['priya', 'ritu', 'pooja', 'neha', 'simran', 'kavya'],
@@ -74,6 +74,7 @@ const Chat = () => {
 
     const handleSend = async (text = input) => {
         if (!text.trim() || loading) return;
+        stop(); // Immediate stop any ongoing speech when user interacts
         const userMsg = { role: 'user', content: text };
         setMessages(prev => [...prev, userMsg]);
         setInput('');
@@ -618,6 +619,7 @@ const settingLabelStyle = {
 export default Chat;
 
 const LinkPreview = ({ text }) => {
+    if (!text) return null;
     const linkMatch = text.match(/\[(.*?)\]\((.*?)\)/);
     if (!linkMatch) return null;
 
@@ -646,5 +648,8 @@ const LinkPreview = ({ text }) => {
                 </a>
             </div>
         </div>
+    );
+};
+
     );
 };

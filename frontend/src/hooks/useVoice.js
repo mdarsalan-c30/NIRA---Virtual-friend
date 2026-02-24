@@ -1,15 +1,26 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { auth } from '../firebase';
 
 export const useVoice = () => {
     const [isListening, setIsListening] = useState(false);
+    const audioRef = useRef(null);
+
+    const stop = useCallback(() => {
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+            audioRef.current = null;
+        }
+    }, []);
 
     const speak = useCallback(async (text, onStart, onEnd, lang = 'en', speaker = 'priya', gender = 'female') => {
+        stop(); // Always stop previous audio first
+
         // Fallback to Browser TTS
         const browserFallback = () => {
             if (!window.speechSynthesis) return;
-            window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(text);
             const voices = window.speechSynthesis.getVoices();
             let preferredVoice;
@@ -66,9 +77,14 @@ export const useVoice = () => {
                 console.groupEnd();
                 if (onStart) onStart();
                 const audio = new Audio(`data:audio/wav;base64,${response.data.audio}`);
-                audio.onended = onEnd;
+                audioRef.current = audio;
+                audio.onended = () => {
+                    audioRef.current = null;
+                    if (onEnd) onEnd();
+                };
                 audio.onerror = (e) => {
                     console.error("❌ Audio playback error:", e);
+                    audioRef.current = null;
                     browserFallback();
                 };
                 await audio.play();
@@ -88,9 +104,9 @@ export const useVoice = () => {
 
             browserFallback();
         }
-    }, []);
+    }, [stop]);
 
-    const listen = useCallback((onResult, lang = 'en') => {
+    const listen = useCallback((onResult, lang = 'hi') => {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
             alert("Speech recognition not supported in this browser.");
@@ -117,5 +133,5 @@ export const useVoice = () => {
         recognition.start();
     }, []);
 
-    return { speak, listen, isListening };
+    return { speak, stop, listen, isListening };
 };
