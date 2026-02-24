@@ -13,6 +13,9 @@ const MOCK_RESPONSES = [
     "Hmm, sahi hai. Par thoda connection slow hai mera, ek baar phir batana?",
 ];
 
+console.log("📍 [Gemini Service] GROQ_API_KEY Status:", process.env.GROQ_API_KEY ? "FOUND (Length: " + process.env.GROQ_API_KEY.length + ")" : "MISSING");
+console.log("📍 [Gemini Service] GEMINI_API_KEY Status:", process.env.GEMINI_API_KEY ? "FOUND (Length: " + process.env.GEMINI_API_KEY.length + ")" : "MISSING");
+
 // Global error cache for debugging on Render
 const debugErrors = [];
 function logError(api, msg) {
