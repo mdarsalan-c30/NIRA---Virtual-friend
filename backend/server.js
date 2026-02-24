@@ -5,13 +5,17 @@ const path = require('path');
 dotenv.config(); // Loads from .env in the current working directory
 dotenv.config({ path: path.join(__dirname, '../.env') }); // Fallback to root .env if it exists
 
+// Initialize Telegram Bot
+require('./services/telegram');
+
 const express = require('express');
 const cors = require('cors');
 const admin = require('firebase-admin');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Initialize Firebase Admin
 let serviceAccount;

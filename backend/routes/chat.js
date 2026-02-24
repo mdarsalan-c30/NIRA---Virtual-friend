@@ -7,7 +7,7 @@ const memoryService = require('../services/MemoryService');
 const db = admin.firestore();
 
 router.post('/', async (req, res) => {
-    const { message } = req.body;
+    const { message, image } = req.body;
     const userId = req.user.uid;
 
     if (!message) {
@@ -37,7 +37,7 @@ router.post('/', async (req, res) => {
         console.log(`Fetched memory for ${userId}. Messages: ${memory.recentMessages.length}, Facts: ${memory.longTerm.length}`);
 
         // 2. Get Gemini response
-        const aiResponse = await getChatResponse(message, memory);
+        const aiResponse = await getChatResponse(message, memory, image);
 
         // 3. Save messages in a batch
         const batch = db.batch();
@@ -45,6 +45,7 @@ router.post('/', async (req, res) => {
         batch.set(userMsgRef, {
             role: 'user',
             content: message,
+            image: image || null,
             timestamp: admin.firestore.FieldValue.serverTimestamp()
         });
 

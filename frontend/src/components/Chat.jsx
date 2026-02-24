@@ -22,6 +22,8 @@ const Chat = () => {
     const [selectedVoice, setSelectedVoice] = useState(() => localStorage.getItem('nira_voice') || (persona === 'ali' ? 'rohan' : 'ritu'));
     const [showSettings, setShowSettings] = useState(false);
     const [searching, setSearching] = useState(false);
+    const [selectedImage, setSelectedImage] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
 
     const messagesEndRef = useRef(null);
     const { speak, stop, listen, isListening } = useVoice();
@@ -72,13 +74,27 @@ const Chat = () => {
     useEffect(() => { localStorage.setItem('nira_voice', selectedVoice); }, [selectedVoice]);
     useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
+    const handleImageUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setSelectedImage(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImagePreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     const handleSend = async (text = input) => {
         if (!text.trim() || loading) return;
         stop(); // Immediate stop any ongoing speech when user interacts
-        const userMsg = { role: 'user', content: text };
+        const userMsg = { role: 'user', content: text, image: imagePreview };
         setMessages(prev => [...prev, userMsg]);
         setInput('');
         setLoading(true);
+        setSelectedImage(null);
+        setImagePreview(null);
 
         const triggers = ['weather', 'mausam', 'news', 'khabar', 'taza', 'latest', 'today', 'aaj', 'score', 'match', 'price', 'bhaav', 'rate', 'who is', 'kon hai', 'what is', 'kya hai', 'youtube', 'yt', 'video', 'link', 'sunao', 'play'];
         if (triggers.some(t => text.toLowerCase().includes(t))) {
@@ -88,7 +104,7 @@ const Chat = () => {
         try {
             const token = await auth.currentUser.getIdToken();
             const response = await axios.post(`${API_URL}/chat`,
-                { message: text },
+                { message: text, image: userMsg.image },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
@@ -478,10 +494,29 @@ const Chat = () => {
 
                     <footer style={{ padding: '20px', background: 'rgba(0,0,0,0.2)' }}>
                         <div style={{
-                            display: 'flex', gap: '8px', background: 'rgba(255,255,255,0.05)',
-                            padding: '6px', borderRadius: '30px', border: '1px solid rgba(255,255,255,0.1)'
+                            borderRadius: '16px', background: 'rgba(255,255,255,0.05)',
+                            display: 'flex', alignItems: 'center', gap: '10px',
+                            border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden'
                         }}>
-                            <button onClick={() => listen(handleSend, language)} style={actionBtnStyle(isListening, '#ef4444')}>
+                            <label style={{
+                                width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                cursor: 'pointer', color: selectedImage ? '#10b981' : 'rgba(255,255,255,0.4)', transition: 'all 0.2s'
+                            }}>
+                                <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
+                                <Sparkles size={20} />
+                            </label>
+
+                            {imagePreview && (
+                                <div style={{ position: 'relative', margin: '5px' }}>
+                                    <img src={imagePreview} style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.2)' }} />
+                                    <button
+                                        onClick={() => { setSelectedImage(null); setImagePreview(null); }}
+                                        style={{ position: 'absolute', top: -5, right: -5, width: '16px', height: '16px', borderRadius: '50%', background: '#ef4444', color: 'white', border: 'none', fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                    >✕</button>
+                                </div>
+                            )}
+
+                            <button onClick={() => { stop(); listen(handleSend, language); }} style={actionBtnStyle(isListening, '#ef4444')}>
                                 <Mic size={20} />
                             </button>
                             <input

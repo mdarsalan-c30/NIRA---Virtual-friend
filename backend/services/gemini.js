@@ -26,12 +26,12 @@ const MOCK_RESPONSES = [
 
 const SearchService = require('./SearchService');
 
-async function getChatResponse(userMessage, memory) {
+async function getChatResponse(userMessage, memory, image = null) {
     console.log(`🧠 [Brain] Processing: "${userMessage?.substring(0, 30)}"`);
 
-    // Check if we need to search the web
+    // Check if we need to search the web (skip if it's an image)
     let searchResults = null;
-    if (SearchService.shouldSearch(userMessage)) {
+    if (!image && SearchService.shouldSearch(userMessage)) {
         searchResults = await SearchService.search(userMessage);
     }
 
@@ -86,9 +86,23 @@ async function getChatResponse(userMessage, memory) {
 
             // Format recent history for Gemini
             const historyText = recentStr.map(m => `${m.role === 'user' ? 'User' : 'Nira'}: ${m.content}`).join('\n');
-            const prompt = `${fullSystem}\n\nRecent Chat History:\n${historyText}\n\nUser: ${userMessage}\nNira:`;
+            const promptParts = [
+                { text: `${fullSystem}\n\nRecent Chat History:\n${historyText}\n\nUser: ${userMessage}\nNira:` }
+            ];
 
-            const result = await model.generateContent(prompt);
+            if (image) {
+                const base64Data = image.split(',')[1] || image;
+                const mimeType = image.includes(';') ? image.split(';')[0].split(':')[1] : 'image/jpeg';
+                promptParts.push({
+                    inlineData: {
+                        mimeType: mimeType || 'image/jpeg',
+                        data: base64Data
+                    }
+                });
+                console.log("📸 [Brain] Including image in prompt.");
+            }
+
+            const result = await model.generateContent(promptParts);
             const text = result.response.text().trim();
             if (text) {
                 console.log("✅ [Brain] Gemini Success.");
