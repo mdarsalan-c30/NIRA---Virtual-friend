@@ -13,6 +13,7 @@ const MOCK_RESPONSES = [
 ];
 
 async function getChatResponse(userMessage, memory) {
+    console.log(`🧠 [Brain] Processing: "${userMessage?.substring(0, 30)}"`);
     // Sanitize and format history: alternating user/assistant, no consecutive same roles
     const recentStr = [];
     let lastRole = null;
@@ -64,7 +65,9 @@ async function getChatResponse(userMessage, memory) {
             if (text) return text;
         } catch (err) {
             console.error('❌ [Groq Failure]:', err.message);
-            if (err.status === 429) console.error('Rate limited. Waiting...');
+            if (err.status === 429) {
+                console.warn('⚠️ Groq Rate Limit (429). Falling back to Gemini...');
+            }
         }
     }
 
