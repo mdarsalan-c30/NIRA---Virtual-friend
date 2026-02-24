@@ -651,5 +651,3 @@ const LinkPreview = ({ text }) => {
     );
 };
 
-    );
-};
