@@ -13,16 +13,6 @@ const MOCK_RESPONSES = [
     "Hmm, sahi hai. Par thoda connection slow hai mera, ek baar phir batana?",
 ];
 
-console.log("📍 [Gemini Service] GROQ_API_KEY Status:", process.env.GROQ_API_KEY ? "FOUND (Length: " + process.env.GROQ_API_KEY.length + ")" : "MISSING");
-console.log("📍 [Gemini Service] GEMINI_API_KEY Status:", process.env.GEMINI_API_KEY ? "FOUND (Length: " + process.env.GEMINI_API_KEY.length + ")" : "MISSING");
-
-// Global error cache for debugging on Render
-const debugErrors = [];
-function logError(api, msg) {
-    debugErrors.push({ api, msg, time: new Date().toISOString() });
-    if (debugErrors.length > 10) debugErrors.shift();
-}
-
 async function getChatResponse(userMessage, memory) {
     console.log(`🧠 [Brain] Processing: "${userMessage?.substring(0, 30)}"`);
     // Sanitize and format history: alternating user/assistant, no consecutive same roles
@@ -77,7 +67,6 @@ async function getChatResponse(userMessage, memory) {
             }
         } catch (err) {
             console.error('❌ [Gemini Failure]:', err.message);
-            logError('Gemini', err.message);
         }
     }
 
@@ -103,7 +92,6 @@ async function getChatResponse(userMessage, memory) {
             }
         } catch (err) {
             console.error('❌ [Groq Failure]:', err.message);
-            logError('Groq', err.message);
         }
     }
 
@@ -111,4 +99,4 @@ async function getChatResponse(userMessage, memory) {
     return MOCK_RESPONSES[Math.floor(Math.random() * MOCK_RESPONSES.length)];
 }
 
-module.exports = { getChatResponse, debugErrors };
+module.exports = { getChatResponse };

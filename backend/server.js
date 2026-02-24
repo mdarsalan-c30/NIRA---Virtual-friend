@@ -91,26 +91,11 @@ const authenticate = async (req, res, next) => {
 };
 
 // Routes
-const { debugErrors } = require('./services/gemini');
-app.get('/api/debug-errors', (req, res) => res.json(debugErrors));
-
 const chatRoutes = require('./routes/chat');
 app.use('/api/chat', authenticate, chatRoutes);
 
 const memoryRoutes = require('./routes/memory');
 app.use('/api/memory', authenticate, memoryRoutes);
-
-// Health Check for AI Keys (Debug Deployment)
-app.get('/api/health-ai', (req, res) => {
-    res.json({
-        groq: !!process.env.GROQ_API_KEY,
-        gemini: !!process.env.GEMINI_API_KEY,
-        sarvam: !!process.env.SARVAM_API_KEY,
-        firebase: !!process.env.FIREBASE_PROJECT_ID,
-        env: process.env.NODE_ENV || 'development',
-        time: new Date().toISOString()
-    });
-});
 
 app.get('/api/tts-health', (req, res) => res.json({ status: 'TTS Backend is Reachable ✅', time: new Date().toISOString() }));
 

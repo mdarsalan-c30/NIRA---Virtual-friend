@@ -17,9 +17,9 @@ const Chat = () => {
     const [showChat, setShowChat] = useState(window.innerWidth > 1024); // Show by default on large screens
     const [stats, setStats] = useState({ days: 1, interactions: 0 });
     const isMobile = window.innerWidth < 768;
-    const [language, setLanguage] = useState(() => localStorage.getItem('nira_lang') || (isMobile ? 'hi' : 'en'));
+    const [language, setLanguage] = useState(() => localStorage.getItem('nira_lang') || 'hi');
     const [persona, setPersona] = useState(() => localStorage.getItem('nira_persona') || 'nira');
-    const [selectedVoice, setSelectedVoice] = useState(() => localStorage.getItem('nira_voice') || (isMobile ? 'ritu' : (persona === 'ali' ? 'rohan' : 'ritu')));
+    const [selectedVoice, setSelectedVoice] = useState(() => localStorage.getItem('nira_voice') || (persona === 'ali' ? 'rohan' : 'ritu'));
     const [showSettings, setShowSettings] = useState(false);
 
     const messagesEndRef = useRef(null);
