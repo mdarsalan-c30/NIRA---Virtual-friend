@@ -37,10 +37,38 @@ router.post('/', async (req, res) => {
         if (!isPro && usedMinutes >= globalSettings.trialLimitMinutes) {
             return res.status(403).json({
                 error: 'TRIAL_ENDED',
-                message: "Yaar, hamara free trial khatam ho gaya! 🥺 Kya tum mujhe support karke NIRA Pro me upgrade karoge?",
+                message: "Yaar, hamara free trial khatam ho gaya! 🥺 Kya tum mujhe support karke NYRA Pro me upgrade karoge?",
                 link: "https://mdarsalan.vercel.app/" // Link to founder for payment/upgrade
             });
         }
+
+        // --- [NAME ONBOARDING LOGIC] ---
+        const setupStep = userData.setupStep || 'NEW';
+
+        // Step 1: Force name request if missing
+        if (!userData.name && setupStep !== 'AWAITING_NAME') {
+            const onboardingMsg = "Namaste! Main NYRA hoon. 😊 Hume dosti toh karni hi hai, par main tumhe kis pyaare naam se bulaun? Batao!";
+
+            // Update Firestore to wait for name
+            await profileRef.set({ setupStep: 'AWAITING_NAME' }, { merge: true });
+
+            return res.json({ response: onboardingMsg });
+        }
+
+        // Step 2: Capture name from user response
+        if (setupStep === 'AWAITING_NAME') {
+            const capturedName = message.trim().substring(0, 20); // Limit name length
+            const responseAfterName = `Shukriya! Toh ab se tum mere dost "${capturedName}" ho. ✨ Chalo, batao aaj ka din kaisa raha?`;
+
+            // Save name and finish setup
+            await profileRef.set({
+                name: capturedName,
+                setupStep: 'COMPLETE'
+            }, { merge: true });
+
+            return res.json({ response: responseAfterName });
+        }
+        // --- [END ONBOARDING LOGIC] ---
 
         const memory = {
             identity: userData,

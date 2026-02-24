@@ -23,7 +23,7 @@ const AdminDashboard = () => {
         if (!user) return;
 
         // Fetch Stats
-        const usersQuery = query(collection(db, 'users'), orderBy('lastActive', 'desc'), limit(5));
+        const usersQuery = query(collection(db, 'users'), limit(100));
         const unsubscribe = onSnapshot(usersQuery, (snapshot) => {
             setRecentUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
             setStats(prev => ({ ...prev, totalUsers: snapshot.size }));
@@ -133,6 +133,10 @@ const AdminDashboard = () => {
                 {activeTab === 'system' && (
                     <SystemSettings />
                 )}
+
+                {activeTab === 'settings' && (
+                    <IdentitySettings />
+                )}
             </div>
         </div>
     );
@@ -200,14 +204,20 @@ const textareaStyle = { width: '100%', height: '120px', background: 'rgba(0,0,0,
 const saveBtnStyle = { marginTop: '15px', padding: '10px 20px', borderRadius: '8px', border: 'none', background: '#6366f1', color: 'white', cursor: 'pointer', fontWeight: 600 };
 
 const SystemSettings = () => {
-    const [settings, setSettings] = useState({ trialLimitMinutes: 5, maintenanceMode: false, globalPrompt: "" });
+    const [settings, setSettings] = useState({ trialLimitMinutes: 5, maintenanceMode: false });
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         const fetchSettings = async () => {
             const docRef = doc(db, 'system', 'settings');
             const docSnap = await getDoc(docRef);
-            if (docSnap.exists()) setSettings(docSnap.data());
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                setSettings({
+                    trialLimitMinutes: data.trialLimitMinutes || 5,
+                    maintenanceMode: data.maintenanceMode || false
+                });
+            }
         };
         fetchSettings();
     }, []);
@@ -216,7 +226,7 @@ const SystemSettings = () => {
         setSaving(true);
         try {
             await setDoc(doc(db, 'system', 'settings'), settings, { merge: true });
-            alert("Settings Updated Globally! 🚀");
+            alert("System Settings Updated! 🚀");
         } catch (e) { alert(e.message); }
         setSaving(false);
     };
@@ -235,17 +245,6 @@ const SystemSettings = () => {
                     />
                     <span>Minutes per Friend</span>
                 </div>
-            </div>
-
-            <div style={cardStyle}>
-                <h3>Core Identity (Global)</h3>
-                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>This prompt will be injected into every conversation.</p>
-                <textarea
-                    style={textareaStyle}
-                    value={settings.globalPrompt}
-                    onChange={e => setSettings({ ...settings, globalPrompt: e.target.value })}
-                    placeholder="Enter global system instructions..."
-                />
             </div>
 
             <div style={cardStyle}>
@@ -272,7 +271,56 @@ const SystemSettings = () => {
                 disabled={saving}
                 style={{ ...saveBtnStyle, padding: '15px', borderRadius: '12px', fontSize: '1rem' }}
             >
-                {saving ? 'Syncing...' : 'Save All Changes'}
+                {saving ? 'Syncing...' : 'Save System Changes'}
+            </button>
+        </div>
+    );
+};
+
+const IdentitySettings = () => {
+    const [settings, setSettings] = useState({ globalPrompt: "" });
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        const fetchSettings = async () => {
+            const docRef = doc(db, 'system', 'settings');
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                setSettings({ globalPrompt: data.globalPrompt || "" });
+            }
+        };
+        fetchSettings();
+    }, []);
+
+    const handleSave = async () => {
+        setSaving(true);
+        try {
+            await setDoc(doc(db, 'system', 'settings'), settings, { merge: true });
+            alert("NYRA's Identity Updated! ✨");
+        } catch (e) { alert(e.message); }
+        setSaving(false);
+    };
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={cardStyle}>
+                <h3>Core Identity (Global)</h3>
+                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>This prompt will be injected into every conversation. Use it to define NIRA's personality.</p>
+                <textarea
+                    style={textareaStyle}
+                    value={settings.globalPrompt}
+                    onChange={e => setSettings({ ...settings, globalPrompt: e.target.value })}
+                    placeholder="Enter global system instructions..."
+                />
+            </div>
+
+            <button
+                onClick={handleSave}
+                disabled={saving}
+                style={{ ...saveBtnStyle, padding: '15px', borderRadius: '12px', fontSize: '1rem' }}
+            >
+                {saving ? 'Syncing...' : 'Save Identity Changes'}
             </button>
         </div>
     );

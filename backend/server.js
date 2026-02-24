@@ -5,8 +5,7 @@ const path = require('path');
 dotenv.config(); // Loads from .env in the current working directory
 dotenv.config({ path: path.join(__dirname, '../.env') }); // Fallback to root .env if it exists
 
-// Initialize Telegram Bot
-require('./services/telegram');
+
 
 const express = require('express');
 const cors = require('cors');
@@ -60,16 +59,21 @@ try {
         console.log("ℹ️ Initializing Firebase via serviceAccountKey.json");
     }
 
-    admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-        databaseURL: process.env.FIREBASE_DATABASE_URL || "https://nira---virtual-friend-default-rtdb.asia-southeast1.firebasedatabase.app"
-    });
-    console.log("✅ Firebase Admin initialized successfully.");
+    if (!admin.apps.length) {
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount),
+            databaseURL: process.env.FIREBASE_DATABASE_URL || "https://nira---virtual-friend-default-rtdb.asia-southeast1.firebasedatabase.app"
+        });
+        console.log("✅ Firebase Admin initialized successfully.");
+    }
 } catch (error) {
     console.error("❌ Firebase Initialization Error:", error.message);
 }
 
 const db = admin.firestore();
+
+// Initialize Telegram Bot
+require('./services/telegram');
 
 const PORT = process.env.PORT || 5000;
 
@@ -106,6 +110,6 @@ app.get('/api/tts-health', (req, res) => res.json({ status: 'TTS Backend is Reac
 const ttsRoutes = require('./routes/tts');
 app.use('/api/tts', authenticate, ttsRoutes);
 
-app.listen(PORT, () => {
-    console.log(`🚀 NIRA Backend running on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 NYRA Backend running on port ${PORT}`);
 });
