@@ -1,0 +1,50 @@
+﻿≡ƒôì CWD: D:\NIRA - VIRTUAL FRIENDS\backend
+≡ƒôì __dirname: D:\NIRA - VIRTUAL FRIENDS\backend
+≡ƒôé Checking root .env at: D:\NIRA - VIRTUAL FRIENDS\.env
+Γ£à Root .env exists. Size: 2719 bytes
+[dotenv@17.3.1] injecting env (14) from ..\.env -- tip: ΓÜÖ∩╕Å  enable debug logging with { debug: true }
+Γ£à Dotenv successfully parsed root .env
+
+≡ƒöì [DIAGNOSTIC] Checking Keys...
+GROQ_API_KEY: Found
+GEMINI_API_KEY: Found
+
+≡ƒº¬ [Groq Test] Calling Llama 3.3...
+node : (node:36780) 
+[DEP0040] 
+DeprecationWarning: 
+The `punycode` 
+module is 
+deprecated. Please 
+use a userland 
+alternative instead.
+At line:1 char:1
++ node test-ai.js 
+2>&1 | Out-File 
+-Encoding utf8 
+diagnostic_output.txt
++ 
+~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: ((node:3   
+ 6780) [D...nativ    
+e instead.:Strin    
+g) [], RemoteExc    
+eption
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+(Use `node 
+--trace-deprecation 
+...` to show where 
+the warning was 
+created)
+Γ£à Groq Success: Hello! It's nice to meet you. Is
+
+≡ƒº¬ [Gemini Test] Listing Models...
+Γ¥î Gemini Error: gen
+AI.getGenerativeModel
+(...).listModels is 
+not a function

@@ -37,16 +37,32 @@ const MOCK_RESPONSES = [
     "Actually thoda busy hoon, matlab server busy hai, tum firse try karo yaar.",
 ];
 
-async function getChatResponse(userMessage, memory) {
+async function getChatResponse(userMessage, memory, userId = 'anonymous') {
     // Get Dynamic Config from AdminService
     const config = AdminService.getConfig() || { ai: { primaryModel: 'groq', fallbackModel: 'gemini', temperature: 0.85 } };
     const primaryModel = config.ai?.primaryModel || 'groq';
     const fallbackModel = config.ai?.fallbackModel || 'gemini';
     const temperature = config.ai?.temperature || 0.85;
 
-    const recentStr = (memory.recentMessages || [])
-        .slice(-8)
-        .map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content }));
+    // Sanitize and format history: alternating user/assistant, no consecutive same roles
+    const recentStr = [];
+    let lastRole = null;
+
+    (memory.recentMessages || []).slice(-10).forEach(m => {
+        const role = m.role === 'user' ? 'user' : 'assistant';
+        if (role !== lastRole && m.content) {
+            recentStr.push({ role, content: m.content });
+            lastRole = role;
+        }
+    });
+
+    // Ensure the last message in history is not 'user' if we are about to add a new 'user' message
+    // (Most APIs allow this, but some prefer the last message in history to be 'assistant')
+    // Actually, Groq allows: system, ..., assistant, user.
+    // So if recentStr ends with 'user', we should probably trim it or ignore it.
+    if (recentStr.length > 0 && recentStr[recentStr.length - 1].role === 'user') {
+        recentStr.pop();
+    }
 
     const contextParts = [];
     if (memory.identity?.name) contextParts.push(`The user's name is ${memory.identity.name}.`);
@@ -80,6 +96,9 @@ async function getChatResponse(userMessage, memory) {
     // --- PRIMARY: Dynamic Model Routing ---
     const useGroq = primaryModel === 'groq' && process.env.GROQ_API_KEY && !needsSearch;
 
+    console.log(`🧠 [Brain Debug] Model: ${primaryModel}, useGroq: ${useGroq}, Search: ${needsSearch}`);
+    console.log(`🧠 [Brain Debug] History Length: ${recentStr.length}, User Msg: ${userMessage.substring(0, 20)}...`);
+
     if (useGroq) {
         try {
             console.log(`🧠 [Brain] Using Groq (Llama 3.3) for reasoning... (Temp: ${temperature})`);
@@ -95,20 +114,26 @@ async function getChatResponse(userMessage, memory) {
                 temperature: temperature,
             });
             const text = completion.choices[0]?.message?.content?.trim();
-            if (text) return text;
+            if (text) {
+                // Log specific model usage
+                AdminService.logUsage(userId, { type: 'groq', tokens: 1 });
+                return text;
+            }
         } catch (err) {
-            console.warn('⚠️ Groq failed:', err.message?.substring(0, 50));
+            console.error('❌ [Groq Failure]:', err);
+            if (err.status === 401) console.error('Check your GROQ_API_KEY');
+            if (err.status === 429) console.error('Groq Rate Limit Reached');
         }
     }
 
     // --- SECONDARY/SEARCH: Gemini Flash (Fast & Reliable) ---
     if (process.env.GEMINI_API_KEY) {
         try {
-            console.log(needsSearch ? "🌐 [Searching...] Using Gemini Flash Search..." : "✨ [Fallback] Using Gemini Flash...");
+            console.log(needsSearch ? "🌐 Using Gemini Flash (Search)..." : "✨ Using Gemini Flash...");
             const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
             const model = genAI.getGenerativeModel({
-                model: 'gemini-1.5-flash-latest',
+                model: 'gemini-1.5-flash',
                 tools: needsSearch ? [{ googleSearchRetrieval: {} }] : []
             });
 
@@ -118,9 +143,13 @@ async function getChatResponse(userMessage, memory) {
 
             const result = await model.generateContent(prompt);
             const rawText = result.response.text().trim();
-            if (rawText) return cleanResponse(rawText);
+            if (rawText) {
+                // Log specific model usage
+                AdminService.logUsage(userId, { type: 'gemini', tokens: 1 });
+                return cleanResponse(rawText);
+            }
         } catch (err) {
-            console.warn('⚠️ Gemini Search failed:', err.message?.substring(0, 50));
+            console.error('❌ [Gemini Failure]:', err);
         }
     }
 

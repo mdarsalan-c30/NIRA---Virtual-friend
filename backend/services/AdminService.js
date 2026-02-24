@@ -65,12 +65,13 @@ class AdminService {
             const today = new Date().toISOString().split('T')[0];
             const usageRef = db.collection('usageMetrics').doc(today);
 
-            const field = `stats.${usageData.type}`;
-            const countField = `counts.${usageData.type}`;
-
             await usageRef.set({
-                [field]: admin.firestore.FieldValue.increment(usageData.tokens || 1),
-                [countField]: admin.firestore.FieldValue.increment(1),
+                stats: {
+                    [usageData.type]: admin.firestore.FieldValue.increment(usageData.tokens || 1)
+                },
+                counts: {
+                    [usageData.type]: admin.firestore.FieldValue.increment(1)
+                },
                 lastUpdated: admin.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
 

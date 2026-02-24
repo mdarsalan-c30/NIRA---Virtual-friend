@@ -61,7 +61,7 @@ router.post('/', async (req, res) => {
         if (visionDesc) console.log(`✅ [Chat Route] Vision Success: ${visionDesc.substring(0, 30)}...`);
 
         // 2. Get Gemini response
-        const aiResponse = await getChatResponse(message, memory);
+        const aiResponse = await getChatResponse(message, memory, userId);
 
         // 3. Return response IMMEDIATELY (Non-blocking DB saves)
         res.json({ response: aiResponse });
