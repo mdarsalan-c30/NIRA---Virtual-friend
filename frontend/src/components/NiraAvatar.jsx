@@ -126,17 +126,7 @@ const NiraAvatar = ({ isSpeaking = false, isListening = false, isThinking = fals
             <Canvas
                 shadows
                 camera={{ position: [0, 0.2, 2.8], fov: isMobile ? 45 : 35 }}
-                gl={{ antialias: true, powerPreference: "high-performance" }}
-                onCreated={({ gl }) => {
-                    const canvas = gl.domElement;
-                    canvas.addEventListener('webglcontextlost', (event) => {
-                        event.preventDefault();
-                        console.warn('🚀 [NIRA AVATAR] WebGL Context Lost! Attempting recovery...');
-                    }, false);
-                    canvas.addEventListener('webglcontextrestored', () => {
-                        console.log('✅ [NIRA AVATAR] WebGL Context Restored.');
-                    }, false);
-                }}
+                gl={{ antialias: true }}
             >
                 <color attach="background" args={['#010103']} />
                 <fog attach="fog" args={['#010103', 5, 10]} />

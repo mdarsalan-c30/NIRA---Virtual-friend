@@ -1,0 +1,30 @@
+﻿3cc818c Fix: move health check routes above 404 catch-all
+3d2017e Add AI health check route for debugging Render deployment
+9eed741 backend error resolved
+ddc4285 new code admin panel fix api
+f699125 adminn
+64a2214 loop issue
+814bacd new
+935018c latency
+99abbe0 server
+196bad0 working on brain
+c6ae3e7 visislity
+0b424ae webs earch
+d2a0bdd vission error
+90c9fed img issue
+1e40170 new syntax errr fix
+8c0ca79 vission feature fixed
+7eaf729 new vission control mode
+4a2b519 newwww
+de9bfc6 new
+8141449 solved sarvam api issue
+ed5fd35 refreshed ui
+b5a0c3e new
+8d6fa2d imporved ui
+6c24e1c ui fixed
+471f974 fixed 404 and import priority
+73775c6 server.js updated to automatically trim backslash
+771ce6d solved firebase issue
+a64653a fixed
+3fb62f0 pushing
+13410e9 Add .gitignore

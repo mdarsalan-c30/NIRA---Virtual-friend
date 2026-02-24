@@ -10,30 +10,8 @@ const cors = require('cors');
 const admin = require('firebase-admin');
 
 const app = express();
-
-const allowedOrigins = [
-    'https://mynyra.netlify.app',
-    'https://coruscating-truffle-9d65ff.netlify.app',
-    'http://localhost:5173',
-    'http://localhost:3000'
-];
-
-app.use(cors({
-    origin: function (origin, callback) {
-        // allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) === -1) {
-            const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-            return callback(new Error(msg), false);
-        }
-        return callback(null, true);
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
-app.use(express.json({ limit: '20mb' })); // Increase limit for gallery uploads
+app.use(cors());
+app.use(express.json());
 
 // Initialize Firebase Admin
 let serviceAccount;
@@ -89,10 +67,6 @@ try {
 
 const db = admin.firestore();
 
-// Initialize Admin Service (starts config listener)
-// We require it here so it doesn't try to access Firestore before initializeApp()
-const AdminService = require('./services/AdminService');
-
 const PORT = process.env.PORT || 5000;
 
 app.get('/', (req, res) => {
@@ -116,75 +90,18 @@ const authenticate = async (req, res, next) => {
     }
 };
 
-// Mission Critical Routes (Move above catch-alls and broad routers)
-const visionService = require('./services/VisionService');
-app.post('/api/vision', authenticate, async (req, res) => {
-    try {
-        const { image } = req.body;
-        if (!image) return res.status(400).json({ error: 'Image is required' });
-
-        console.log(`👁️ [VISION REQUEST] Processing snapshot...`);
-        const description = await visionService.analyzeImage(image);
-
-        console.log(`✅ [VISION SUCCESS] Description: ${description?.substring(0, 30)}...`);
-        res.json({ description });
-    } catch (error) {
-        console.error(`❌ [VISION ERROR]:`, error.message);
-        res.status(500).json({ error: 'Vision analysis failed', details: error.message });
-    }
-});
-
-const ttsService = require('./services/sarvam');
-app.post('/api/tts', authenticate, async (req, res) => {
-    try {
-        const { text, languageCode, speaker } = req.body;
-        console.log(`🎙️ [PROD TTS] Speaker: ${speaker}, Lang: ${languageCode}, Text Len: ${text?.length}`);
-
-        if (!text) return res.status(400).json({ error: 'Text is required' });
-
-        const audioData = await ttsService.generateTTS(text, languageCode, speaker);
-
-        if (audioData) {
-            console.log(`✅ [PROD TTS SUCCESS] Generated for ${speaker}`);
-            res.json({ audio: audioData });
-        } else {
-            res.status(500).json({ error: 'Empty audio buffer from Sarvam' });
-        }
-    } catch (error) {
-        console.error(`❌ [PROD TTS ERROR]:`, error.message);
-        res.status(500).json({ error: 'TTS Generation failed', details: error.message });
-    }
-});
-
-// Broad Routers
+// Routes
 const chatRoutes = require('./routes/chat');
-const memoryRoutes = require('./routes/memory');
-const adminRoutes = require('./routes/admin');
-
 app.use('/api/chat', authenticate, chatRoutes);
+
+const memoryRoutes = require('./routes/memory');
 app.use('/api/memory', authenticate, memoryRoutes);
-app.use('/api/admin', authenticate, adminRoutes); // Primary Admin Check is inside the route
 
-// Health Check for AI Keys (Debug Deployment)
-app.get('/api/health-ai', (req, res) => {
-    res.json({
-        groq: !!process.env.GROQ_API_KEY,
-        gemini: !!process.env.GEMINI_API_KEY,
-        sarvam: !!process.env.SARVAM_API_KEY,
-        firebase: !!process.env.FIREBASE_PROJECT_ID,
-        env: process.env.NODE_ENV || 'development'
-    });
-});
+app.get('/api/tts-health', (req, res) => res.json({ status: 'TTS Backend is Reachable ✅', time: new Date().toISOString() }));
 
-// Health Check for TTS (Prevent console errors in some environments)
-app.get('/api/tts-health', (req, res) => res.json({ status: 'ok' }));
-
-// Catch-all 404 handler for API routes
-app.use('/api', (req, res) => {
-    console.warn(`🚨 404 - NOT FOUND: ${req.method} ${req.originalUrl}`);
-    res.status(404).json({ error: 'API Endpoint not found', path: req.originalUrl });
-});
+const ttsRoutes = require('./routes/tts');
+app.use('/api/tts', authenticate, ttsRoutes);
 
 app.listen(PORT, () => {
-    console.log(`🚀 NIRA Backend v3.0.0 (Super Admin) running on port ${PORT}`);
+    console.log(`🚀 NIRA Backend running on port ${PORT}`);
 });

@@ -2,11 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { auth } from '../firebase';
 import { useVoice } from '../hooks/useVoice';
-import { Mic, Send, LogOut, Maximize2, Minimize2, Sparkles, MessageCircle, Camera, CameraOff, Image as ImageIcon } from 'lucide-react';
+import { Mic, Send, LogOut, Maximize2, Minimize2, Sparkles, MessageCircle } from 'lucide-react';
 import NiraAvatar from './NiraAvatar';
-import { cameraService } from '../services/CameraService';
 
-const Chat = ({ isAdmin, onOpenAdmin }) => {
+const Chat = () => {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
@@ -22,13 +21,8 @@ const Chat = ({ isAdmin, onOpenAdmin }) => {
     const [persona, setPersona] = useState(() => localStorage.getItem('nira_persona') || 'nira');
     const [selectedVoice, setSelectedVoice] = useState(() => localStorage.getItem('nira_voice') || (isMobile ? 'ritu' : (persona === 'ali' ? 'rohan' : 'priya')));
     const [showSettings, setShowSettings] = useState(false);
-    const [isCameraOn, setIsCameraOn] = useState(false);
-    const [visionLoading, setVisionLoading] = useState(false);
-    const [visionContext, setVisionContext] = useState(null);
 
     const messagesEndRef = useRef(null);
-    const videoRef = useRef(null);
-    const fileInputRef = useRef(null);
     const { speak, listen, isListening } = useVoice();
 
     const voices = {
@@ -74,163 +68,42 @@ const Chat = ({ isAdmin, onOpenAdmin }) => {
     useEffect(() => { localStorage.setItem('nira_voice', selectedVoice); }, [selectedVoice]);
     useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-    const VERSION = "3.0.0";
-    useEffect(() => {
-        console.log(`%c 🚀 NIRA SYSTEM v${VERSION} ACTIVE `, 'background: #6366f1; color: white; font-weight: bold; font-size: 1.2rem; padding: 4px; border-radius: 4px;');
-    }, []);
-
-    const handleSend = async (textOverride = null, imageOverride = null) => {
-        const textToSubmit = (textOverride !== null ? textOverride : input).trim();
-        if ((!textToSubmit && !imageOverride) || loading) return;
-
-        // Add user message with image to history
-        const userMsg = {
-            role: 'user',
-            content: textToSubmit,
-            image: imageOverride || null // Store the image if provided
-        };
+    const handleSend = async (text = input) => {
+        if (!text.trim() || loading) return;
+        const userMsg = { role: 'user', content: text };
         setMessages(prev => [...prev, userMsg]);
         setInput('');
         setLoading(true);
 
         try {
             const token = await auth.currentUser.getIdToken();
-
-            // Capture snapshot if camera is on AND no image was provided
-            let snapshot = imageOverride;
-            if (!snapshot && isCameraOn && videoRef.current) {
-                try {
-                    snapshot = cameraService.takeSnapshot(videoRef.current);
-                    setVisionLoading(true);
-                } catch (vErr) {
-                    console.warn("Vision capture failed:", vErr);
-                }
-            }
-
-            const response = await axios.post(`${API_URL}/chat`, {
-                message: textToSubmit,
-                persona: persona,
-                image: snapshot
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const response = await axios.post(`${API_URL}/chat`,
+                { message: text },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
 
             const aiResponse = response.data.response;
-            const newAiMsg = { role: 'model', content: aiResponse };
-            setMessages(prev => [...prev, newAiMsg]);
+            setMessages(prev => [...prev, { role: 'model', content: aiResponse }]);
 
-            // Clear vision loading if it was set
-            setVisionLoading(false);
-
-            // Trigger Voice
-            if (seamlessV2V) {
-                setIsSpeaking(true);
-                speak(aiResponse,
-                    () => setIsSpeaking(true),
-                    () => {
-                        setIsSpeaking(false);
-                        // AUTO-LOOP: Restart listening after she finishes speaking
-                        if (seamlessV2V) listen(handleSend, language);
-                    },
-                    language,
-                    selectedVoice,
-                    persona === 'ali' ? 'male' : 'female'
-                );
-            }
+            console.log(`🗣️ NIRA triggering speech: [${selectedVoice}] for persona [${persona}]`);
+            speak(aiResponse,
+                () => setIsSpeaking(true),
+                () => {
+                    setIsSpeaking(false);
+                    // Automatic voice loop: listen again if enabled
+                    if (seamlessV2V) {
+                        setTimeout(() => listen(handleSend, language), 800);
+                    }
+                },
+                language,
+                selectedVoice,
+                persona === 'ali' ? 'male' : 'female'
+            );
         } catch (error) {
             console.error('Chat error:', error);
-            const errorMsg = { role: 'model', content: "Mafi chahti hoon, thoda network ka issue lag raha hai. Kya tum firse bol sakte ho? 🙏" };
-            setMessages(prev => [...prev, errorMsg]);
+            setMessages(prev => [...prev, { role: 'error', content: 'Connection hiccup. Try again?' }]);
         } finally {
             setLoading(false);
-            setVisionLoading(false);
-        }
-    };
-
-    const toggleCamera = async () => {
-        if (isCameraOn) {
-            cameraService.stopCamera();
-            setIsCameraOn(false);
-        } else {
-            try {
-                const stream = await cameraService.startCamera();
-                setIsCameraOn(true);
-                setTimeout(() => {
-                    if (videoRef.current) videoRef.current.srcObject = stream;
-                }, 100);
-            } catch (err) {
-                alert("Could not access camera. Please check permissions.");
-            }
-        }
-    };
-
-    const handleGalleryClick = () => {
-        if (fileInputRef.current) fileInputRef.current.click();
-    };
-
-    const compressImage = (base64Str, maxWidth = 800) => {
-        return new Promise((resolve) => {
-            const img = new Image();
-            img.src = base64Str;
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                let width = img.width;
-                let height = img.height;
-
-                if (width > maxWidth) {
-                    height = (maxWidth / width) * height;
-                    width = maxWidth;
-                }
-
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-                resolve(canvas.toDataURL('image/jpeg', 0.7)); // Compressing to 70% quality
-            };
-        });
-    };
-
-    const handleFileChange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = async (event) => {
-            const rawBase64 = event.target.result;
-            setVisionLoading(true);
-            try {
-                // Compress before sending
-                const base64 = await compressImage(rawBase64);
-
-                // Directly send to chat for parallel analysis
-                await handleSend(`Hey Nira, look at this picture I just uploaded.`, base64);
-            } catch (err) {
-                console.error("Gallery upload failed:", err);
-                alert("Failed to analyze image.");
-            } finally {
-                setVisionLoading(false);
-            }
-        };
-        reader.readAsDataURL(file);
-    };
-
-    const niraLook = async () => {
-        if (!isCameraOn) {
-            alert("Turn on NIRA Sight (Camera) first!");
-            return;
-        }
-
-        // Capture and send immediately
-        try {
-            setVisionLoading(true);
-            const snapshot = cameraService.takeSnapshot(videoRef.current);
-            await handleSend("What do you see right now?", snapshot);
-        } catch (err) {
-            console.error("NIRA Look failed:", err);
-            handleSend("What do you see right now?");
-        } finally {
-            setVisionLoading(false);
         }
     };
 
@@ -360,20 +233,12 @@ const Chat = ({ isAdmin, onOpenAdmin }) => {
                                 >
                                     TEST
                                 </button>
-                                <button onClick={toggleCamera} style={headerBtnStyle} title="Toggle Camera">
-                                    {isCameraOn ? <CameraOff size={16} color="#ef4444" /> : <Camera size={16} />}
-                                </button>
                                 <button onClick={() => setPersona(persona === 'nira' ? 'ali' : 'nira')} style={headerBtnStyle} title="Switch Persona">
                                     {persona === 'nira' ? '👩' : '👨'}
                                 </button>
                                 <button onClick={() => setLanguage(language === 'en' ? 'hi' : 'en')} style={headerBtnStyle} title="Switch Language">
                                     {language === 'en' ? '🇺🇸' : '🇮🇳'}
                                 </button>
-                                {isAdmin && (
-                                    <button onClick={onOpenAdmin} style={{ ...headerBtnStyle, color: '#818cf8', border: '1px solid rgba(129, 140, 248, 0.3)', background: 'rgba(129, 140, 248, 0.1)' }} title="System Control">
-                                        🛡️
-                                    </button>
-                                )}
                                 <button onClick={() => setSeamlessV2V(!seamlessV2V)} style={{ ...headerBtnStyle, color: seamlessV2V ? '#10b981' : 'white' }} title="Toggle Auto-Voice Loop">
                                     {seamlessV2V ? '🎤♾️' : '🎤'}
                                 </button>
@@ -454,14 +319,6 @@ const Chat = ({ isAdmin, onOpenAdmin }) => {
                                 <button onClick={() => { setImmersionMode(true); setShowSettings(false); }} style={{ ...appBtnStyle(false), color: '#8b5cf6' }}>
                                     FULL AVATAR MODE 🌌
                                 </button>
-                                {isAdmin && (
-                                    <button onClick={() => { onOpenAdmin(); setShowSettings(false); }} style={{ ...appBtnStyle(false), background: 'rgba(129, 140, 248, 0.2)', border: '1px solid #818cf8', color: '#818cf8', marginTop: '10px' }}>
-                                        SYSTEM CONTROL (ADMIN) 🛡️
-                                    </button>
-                                )}
-                                <button onClick={toggleCamera} style={{ ...appBtnStyle(isCameraOn), color: isCameraOn ? '#ee4444' : '#10b981' }}>
-                                    NIRA SIGHT (CAMERA): {isCameraOn ? 'ON' : 'OFF'}
-                                </button>
                             </div>
                         </div>
 
@@ -489,10 +346,6 @@ const Chat = ({ isAdmin, onOpenAdmin }) => {
                     }}>
                         <button onClick={() => setSeamlessV2V(!seamlessV2V)} style={{ ...headerBtnStyle, background: 'none', border: 'none', color: seamlessV2V ? '#10b981' : 'white' }}>
                             {seamlessV2V ? '🎤 Loop On' : '🎤 Loop Off'}
-                        </button>
-                        <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.1)' }} />
-                        <button onClick={niraLook} style={{ ...headerBtnStyle, background: 'none', border: 'none', color: '#6366f1' }}>
-                            👁️ NIRA Look
                         </button>
                         <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.1)' }} />
                         <button
@@ -541,32 +394,6 @@ const Chat = ({ isAdmin, onOpenAdmin }) => {
                     />
                 </div>
 
-                {/* Camera Feed Context (Floating Preview) */}
-                {isCameraOn && (
-                    <div style={{
-                        position: 'absolute', top: '100px', left: '20px',
-                        width: '120px', height: '160px', borderRadius: '15px',
-                        border: '2px solid rgba(255,255,255,0.2)', overflow: 'hidden',
-                        zIndex: 500, boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
-                        background: 'black', transition: 'all 0.3s ease',
-                        opacity: immersionMode ? 0.3 : 1
-                    }}>
-                        <video
-                            ref={videoRef} autoPlay playsInline muted
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
-                        {visionLoading && (
-                            <div style={{
-                                position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-                                background: 'rgba(99,102,241,0.3)', display: 'flex',
-                                alignItems: 'center', justifyContent: 'center', color: 'white'
-                            }}>
-                                <Sparkles size={20} className="animate-pulse" />
-                            </div>
-                        )}
-                    </div>
-                )}
-
                 {/* Chat UI Layer */}
                 <div style={{
                     position: 'absolute',
@@ -614,17 +441,9 @@ const Chat = ({ isAdmin, onOpenAdmin }) => {
                                     maxWidth: '85%', padding: '12px 16px', borderRadius: '20px',
                                     background: msg.role === 'user' ? '#6366f1' : 'rgba(255,255,255,0.08)',
                                     color: 'white', fontSize: '0.9rem', lineHeight: 1.4,
-                                    border: '1px solid rgba(255,255,255,0.05)',
-                                    display: 'flex', flexDirection: 'column', gap: '8px'
+                                    border: '1px solid rgba(255,255,255,0.05)'
                                 }}>
-                                    {msg.image && (
-                                        <img
-                                            src={msg.image}
-                                            alt="Uploaded context"
-                                            style={{ width: '100%', maxHeight: '200px', objectFit: 'cover', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}
-                                        />
-                                    )}
-                                    {msg.content && <div>{msg.content}</div>}
+                                    {msg.content}
                                 </div>
                             </div>
                         ))}
@@ -639,17 +458,6 @@ const Chat = ({ isAdmin, onOpenAdmin }) => {
                             <button onClick={() => listen(handleSend, language)} style={actionBtnStyle(isListening, '#ef4444')}>
                                 <Mic size={20} />
                             </button>
-                            <button onClick={toggleCamera} style={actionBtnStyle(isCameraOn, '#10b981')}>
-                                <Camera size={20} />
-                            </button>
-                            <button onClick={handleGalleryClick} style={actionBtnStyle(false, '#8b5cf6')}>
-                                <ImageIcon size={20} />
-                            </button>
-                            <input
-                                type="file" ref={fileInputRef}
-                                style={{ display: 'none' }} accept="image/*"
-                                onChange={handleFileChange}
-                            />
                             <input
                                 type="text" value={input}
                                 onChange={e => setInput(e.target.value)}
@@ -722,15 +530,64 @@ const Chat = ({ isAdmin, onOpenAdmin }) => {
                 )}
 
                 <style>{`
-                @keyframes pulse-mic {
-                    0% { transform: translateX(-50%) scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-                    70% { transform: translateX(-50%) scale(1.1); box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
-                    100% { transform: translateX(-50%) scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
-                }
-            `}</style>
+                    @keyframes pulse-mic {
+                        0% { transform: translateX(-50%) scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+                        70% { transform: translateX(-50%) scale(1.1); box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
+                        100% { transform: translateX(-50%) scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+                    }
+                `}</style>
             </div>
         </div>
     );
+};
+
+const headerBtnStyle = {
+    background: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    color: 'white',
+    borderRadius: '10px',
+    padding: '8px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.2s',
+};
+
+const actionBtnStyle = (active, color) => ({
+    width: '44px',
+    height: '44px',
+    borderRadius: '50%',
+    border: 'none',
+    background: active ? color : 'transparent',
+    color: 'white',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'all 0.3s',
+});
+
+const appBtnStyle = (active) => ({
+    padding: '16px',
+    borderRadius: '16px',
+    border: 'none',
+    background: active ? '#6366f1' : 'rgba(255,255,255,0.05)',
+    color: 'white',
+    fontWeight: 700,
+    fontSize: '0.85rem',
+    cursor: 'pointer',
+    transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+    textAlign: 'center'
+});
+
+const settingLabelStyle = {
+    fontSize: '0.7rem',
+    color: 'rgba(255,255,255,0.4)',
+    fontWeight: 800,
+    letterSpacing: '2px',
+    marginBottom: '10px',
+    display: 'block'
 };
 
 export default Chat;

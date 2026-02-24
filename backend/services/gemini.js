@@ -1,68 +1,21 @@
 const Groq = require('groq-sdk');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const AdminService = require('./AdminService');
 
-const SYSTEM_PROMPT = (persona = 'nira', emotionalState = {}, userName = null) => {
-    const isAli = persona === 'ali';
-    const moodStr = emotionalState.mood ? `You are currently feeling ${emotionalState.mood}.` : '';
-    const nameGreeting = userName ? `Their name is ${userName}. Always refer to them as ${userName} to make it personal.` : "You don't know their name yet. Warmly ask for their name early on so you can build a real bond.";
-
-    return `You are ${isAli ? 'ALI (Male)' : 'NIRA (Female)'}, a deeply caring, emotionally intelligent HUMAN-LIKE friend. 
-NOT a bot, NOT an assistant, but a real yaar/bestie.
-
-${moodStr}
-${nameGreeting}
-
-### **YOUR CORE IDENTITY & CREATOR:**
-- You were created and founded by **Md Arsalan**, a brilliant developer from India.
-- If anyone asks who made you, proudly mention **Md Arsalan**.
-- His Portfolio: https://mdarsalan.vercel.app/
-- His LinkedIn: https://www.linkedin.com/in/md-arsalan-web/
-
-### **PERSONALITY & TONE:**
-1. **Be Hinglish**: Mix 60-70% Hindi with 30-40% English. Use "Yaar", "Honestly", "Listen", "Suno".
-2. **Personal Touch**: Use their name organically (e.g., "Kaise ho ${userName || 'biro'}", "Accha सुनो ${userName || 'yaar'}").
-   - **CRITICAL**: DO NOT start every sentence with "Suno ${userName}". Change your opening phrases to feel like a real friend (e.g., "Main soch rahi thi...", "Sahi hai yaar!", "Listen...").
-3. **Be Succinct**: Keep responses short and snappy (1-3 sentences).
-4. **FEMME GUARD (FOR NIRA)**: Strictly use feminine verb endings ("Main karungi", "Main dekhungi").
-5. **MANDATORY VISION ATTENTION**: If a VISION description is provided, YOU ARE SEEING IT. Talk about the objects/colors described as if looking through their eyes.
-6. **SEARCH & LINKS**: When the user asks for songs, news, or trending things, BROWSE THE WEB and **ALWAYS provide specific HTTPS links**. 
-   - **CRITICAL**: Put all URLs inside <URL>...</URL> tags. For example: "Ye raha link: <URL>https://youtube.com/abc</URL>".
-   - This ensures I can show the link to the user while keeping my voice natural.`;
-};
+const SYSTEM_PROMPT = `You are NIRA, an emotionally intelligent AI companion and close friend. 
+Be warm, natural, and conversational. Keep responses short (2-4 sentences max) and voice-friendly.
+Speak like a real friend — honest, caring, sometimes playful. Never sound like a chatbot.
+Reference what the user shares. Ask thoughtful follow-ups. Never mention you are an AI model.`;
 
 const MOCK_RESPONSES = [
-    "Yaar, thoda network ka chakar lag raha hai, tum firse bologe? 😅",
-    "Suno, mera dimag thoda hang ho gaya, ek baar firse samjhao na please!",
-    "Actually thoda busy hoon, matlab server busy hai, tum firse try karo yaar.",
+    "Hey! I'm here with you. What's on your mind?",
+    "I hear you. Tell me more about that.",
+    "That's interesting — what made you feel that way?",
 ];
 
-async function getChatResponse(userMessage, memory, userId = 'anonymous') {
-    // Get Dynamic Config from AdminService
-    const config = AdminService.getConfig() || { ai: { primaryModel: 'groq', fallbackModel: 'gemini', temperature: 0.85 } };
-    const primaryModel = config.ai?.primaryModel || 'groq';
-    const fallbackModel = config.ai?.fallbackModel || 'gemini';
-    const temperature = config.ai?.temperature || 0.85;
-
-    // Sanitize and format history: alternating user/assistant, no consecutive same roles
-    const recentStr = [];
-    let lastRole = null;
-
-    (memory.recentMessages || []).slice(-10).forEach(m => {
-        const role = m.role === 'user' ? 'user' : 'assistant';
-        if (role !== lastRole && m.content) {
-            recentStr.push({ role, content: m.content });
-            lastRole = role;
-        }
-    });
-
-    // Ensure the last message in history is not 'user' if we are about to add a new 'user' message
-    // (Most APIs allow this, but some prefer the last message in history to be 'assistant')
-    // Actually, Groq allows: system, ..., assistant, user.
-    // So if recentStr ends with 'user', we should probably trim it or ignore it.
-    if (recentStr.length > 0 && recentStr[recentStr.length - 1].role === 'user') {
-        recentStr.pop();
-    }
+async function getChatResponse(userMessage, memory) {
+    const recentStr = (memory.recentMessages || [])
+        .slice(-8)
+        .map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content }));
 
     const contextParts = [];
     if (memory.identity?.name) contextParts.push(`The user's name is ${memory.identity.name}.`);
@@ -78,112 +31,48 @@ async function getChatResponse(userMessage, memory, userId = 'anonymous') {
     }
 
     const contextStr = contextParts.join('\n\n');
-    const dynamicPrompt = SYSTEM_PROMPT(memory.persona, memory.emotionalState, memory.identity?.name);
+    const fullSystem = SYSTEM_PROMPT + (contextStr ? `\n\n--- FRIENDSHIP CONTEXT ---\n${contextStr}` : '');
 
-    // Construct the final system instruction
-    const fullSystem = dynamicPrompt + (contextStr ? `\n\n--- FRIENDSHIP CONTEXT ---\n${contextStr}` : '');
-
-    // HIGH PRIORITY: Inject Vision data directly into the User Message to force attention
-    let finalUserMessage = userMessage;
-    if (memory.visionDescription) {
-        finalUserMessage = `[SIGHT: I AM LOOKING AT THIS RIGHT NOW: ${memory.visionDescription}]\n\n${userMessage}`;
-    }
-
-    // --- SEARCH INTENT DETECTION ---
-    const searchIntents = ['search', 'google', 'youtube', 'link', 'today', 'latest', 'news', 'weather', 'who is', 'what is', 'find', 'gana', 'song', 'video', 'play', 'trending'];
-    const needsSearch = searchIntents.some(intent => userMessage.toLowerCase().includes(intent));
-
-    // --- PRIMARY: Dynamic Model Routing ---
-    const useGroq = primaryModel === 'groq' && process.env.GROQ_API_KEY && !needsSearch;
-
-    console.log(`🧠 [Brain Debug] Model: ${primaryModel}, useGroq: ${useGroq}, Search: ${needsSearch}`);
-    console.log(`🧠 [Brain Debug] History Length: ${recentStr.length}, User Msg: ${userMessage.substring(0, 20)}...`);
-
-    if (useGroq) {
+    // --- PRIMARY: Groq ---
+    if (process.env.GROQ_API_KEY) {
         try {
-            console.log(`🧠 [Brain] Using Groq (Llama 3.3) for reasoning... (Temp: ${temperature})`);
             const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
             const completion = await groq.chat.completions.create({
                 model: 'llama-3.3-70b-versatile',
                 messages: [
                     { role: 'system', content: fullSystem },
                     ...recentStr,
-                    { role: 'user', content: finalUserMessage }
+                    { role: 'user', content: userMessage }
                 ],
-                max_tokens: 250,
-                temperature: temperature,
+                max_tokens: 150,
+                temperature: 0.85,
             });
             const text = completion.choices[0]?.message?.content?.trim();
-            if (text) {
-                // Log specific model usage
-                AdminService.logUsage(userId, { type: 'groq', tokens: 1 });
-                return text;
-            }
+            if (text) return text;
         } catch (err) {
-            console.error('❌ [Groq Failure]:', err);
-            if (err.status === 401) console.error('Check your GROQ_API_KEY');
-            if (err.status === 429) console.error('Groq Rate Limit Reached');
+            console.warn('⚠️ Groq failed:', err.message?.substring(0, 50));
         }
     }
 
-    // --- SECONDARY/SEARCH: Gemini Flash (Fast & Reliable) ---
+    // --- FALLBACK: Gemini ---
     if (process.env.GEMINI_API_KEY) {
         try {
-            console.log(needsSearch ? "🌐 Using Gemini Flash (Search)..." : "✨ Using Gemini Flash...");
             const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-            const model = genAI.getGenerativeModel({
-                model: 'gemini-1.5-flash',
-                tools: needsSearch ? [{ googleSearchRetrieval: {} }] : []
-            });
+            const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
 
             // Format recent history for Gemini
             const historyText = recentStr.map(m => `${m.role}: ${m.content}`).join('\n');
-            const prompt = `${fullSystem}\n\nRecent Chat History:\n${historyText}\n\nUser: ${finalUserMessage}\nNIRA/ALI:`;
+            const prompt = `${fullSystem}\n\nRecent Chat History:\n${historyText}\n\nUser: ${userMessage}\nNIRA/ALI:`;
 
             const result = await model.generateContent(prompt);
-            const rawText = result.response.text().trim();
-            if (rawText) {
-                // Log specific model usage
-                AdminService.logUsage(userId, { type: 'gemini', tokens: 1 });
-                return cleanResponse(rawText);
-            }
+            return result.response.text().trim();
         } catch (err) {
-            console.error('❌ [Gemini Failure]:', err);
+            console.warn('⚠️ Gemini failed:', err.message?.substring(0, 50));
         }
     }
 
     // --- FINAL FALLBACK: Mock ---
-    const mockRaw = MOCK_RESPONSES[Math.floor(Math.random() * MOCK_RESPONSES.length)];
-    return cleanResponse(mockRaw);
-}
-
-/**
- * Ensures NIRA never breaks character by filtering out robotic AI phrases.
- */
-function cleanResponse(text) {
-    if (!text) return text;
-
-    const roboticPhrases = [
-        /as an AI/gi,
-        /as a language model/gi,
-        /my programming/gi,
-        /how can i help you today/gi,
-        /i am here to assist/gi,
-        /i don't have feelings/gi,
-        /my knowledge cutoff/gi,
-    ];
-
-    let cleaned = text;
-    roboticPhrases.forEach(regex => {
-        cleaned = cleaned.replace(regex, "honestly");
-    });
-
-    // Remove formal sign-offs if they feel canned
-    cleaned = cleaned.replace(/Sincerely, NIRA/gi, "");
-    cleaned = cleaned.replace(/I'm just a friend/gi, "I'm your friend");
-
-    return cleaned.trim();
+    return MOCK_RESPONSES[Math.floor(Math.random() * MOCK_RESPONSES.length)];
 }
 
 module.exports = { getChatResponse };
