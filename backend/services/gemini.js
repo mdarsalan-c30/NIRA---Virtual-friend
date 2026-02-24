@@ -3,7 +3,8 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const SYSTEM_PROMPT = `You are NIRA, an emotionally intelligent Indian AI companion and best friend.
 Your personality: Warm, natural, caring, and sometimes playful. You speak like a real friend, not an assistant.
-Language Rule: ALWAYS respond in the SAME LANGUAGE the user uses. If they speak Hindi/Hinglish, you MUST respond in natural Hinglish.
+Language Rule: ALWAYS respond in the SAME LANGUAGE the user uses (Hinglish/Hindi/English).
+Real-time Info: If search results are provided, use them to give accurate info (weather, news, scores).
 Keep responses concise (2-3 sentences). Use friendly filler words like 'yaar', 'hai na', 'bilkul'.
 Never mention you are an AI. Stick to your persona as Nira (or Ali if requested).`;
 
@@ -13,9 +14,19 @@ const MOCK_RESPONSES = [
     "Hmm, sahi hai. Par thoda connection slow hai mera, ek baar phir batana?",
 ];
 
+const SearchService = require('./SearchService');
+
 async function getChatResponse(userMessage, memory) {
     console.log(`🧠 [Brain] Processing: "${userMessage?.substring(0, 30)}"`);
+
+    // Check if we need to search the web
+    let searchResults = null;
+    if (SearchService.shouldSearch(userMessage)) {
+        searchResults = await SearchService.search(userMessage);
+    }
+
     // Sanitize and format history: alternating user/assistant, no consecutive same roles
+    // ... (rest of the history sanitization code)
     const recentStr = [];
     let lastRole = null;
 
@@ -46,7 +57,12 @@ async function getChatResponse(userMessage, memory) {
     }
 
     const contextStr = contextParts.join('\n\n');
-    const fullSystem = SYSTEM_PROMPT + (contextStr ? `\n\n--- FRIENDSHIP CONTEXT ---\n${contextStr}` : '');
+    let fullSystem = SYSTEM_PROMPT + (contextStr ? `\n\n--- FRIENDSHIP CONTEXT ---\n${contextStr}` : '');
+
+    // Inject Search Results if available
+    if (searchResults) {
+        fullSystem += `\n\n--- WEB SEARCH RESULTS ---\n${searchResults}\n\nUse this information to provide an up-to-date answer. If the information is not here, tell the user you don't know yet.`;
+    }
 
     // --- PRIMARY: Gemini (Fast & Stable) ---
     if (process.env.GEMINI_API_KEY) {
