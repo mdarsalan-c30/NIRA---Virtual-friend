@@ -8,9 +8,9 @@ Keep responses concise (2-3 sentences). Use friendly filler words like 'yaar', '
 Never mention you are an AI. Stick to your persona as Nira (or Ali if requested).`;
 
 const MOCK_RESPONSES = [
-    "Hey! I'm here with you. What's on your mind?",
-    "I hear you. Tell me more about that.",
-    "That's interesting — what made you feel that way?",
+    "Arre yaar, thoda network ka chakar hai. Kya bol rahe the tum?",
+    "Main sun rahi hoon, bas thodi connectivity issue hai. Phir se bolo?",
+    "Hmm, sahi hai. Par thoda connection slow hai mera, ek baar phir batana?",
 ];
 
 // Global error cache for debugging on Render
@@ -55,9 +55,33 @@ async function getChatResponse(userMessage, memory) {
     const contextStr = contextParts.join('\n\n');
     const fullSystem = SYSTEM_PROMPT + (contextStr ? `\n\n--- FRIENDSHIP CONTEXT ---\n${contextStr}` : '');
 
-    // --- PRIMARY: Groq ---
+    // --- PRIMARY: Gemini (Fast & Stable) ---
+    if (process.env.GEMINI_API_KEY) {
+        try {
+            console.log("🧠 [Brain] Attempting Gemini Flash (Primary)...");
+            const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+            const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+            // Format recent history for Gemini
+            const historyText = recentStr.map(m => `${m.role === 'user' ? 'User' : 'Nira'}: ${m.content}`).join('\n');
+            const prompt = `${fullSystem}\n\nRecent Chat History:\n${historyText}\n\nUser: ${userMessage}\nNira:`;
+
+            const result = await model.generateContent(prompt);
+            const text = result.response.text().trim();
+            if (text) {
+                console.log("✅ [Brain] Gemini Success.");
+                return text;
+            }
+        } catch (err) {
+            console.error('❌ [Gemini Failure]:', err.message);
+            logError('Gemini', err.message);
+        }
+    }
+
+    // --- FALLBACK: Groq ---
     if (process.env.GROQ_API_KEY) {
         try {
+            console.log("🧠 [Brain] Attempting Groq Fallback...");
             const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
             const completion = await groq.chat.completions.create({
                 model: 'llama-3.3-70b-versatile',
@@ -70,31 +94,13 @@ async function getChatResponse(userMessage, memory) {
                 temperature: 0.85,
             });
             const text = completion.choices[0]?.message?.content?.trim();
-            if (text) return text;
+            if (text) {
+                console.log("✅ [Brain] Groq Success.");
+                return text;
+            }
         } catch (err) {
             console.error('❌ [Groq Failure]:', err.message);
             logError('Groq', err.message);
-            if (err.status === 429) {
-                console.warn('⚠️ Groq Rate Limit (429). Falling back to Gemini...');
-            }
-        }
-    }
-
-    // --- FALLBACK: Gemini ---
-    if (process.env.GEMINI_API_KEY) {
-        try {
-            const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-            const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
-            // Format recent history for Gemini (more stable prompt format)
-            const historyText = recentStr.map(m => `${m.role === 'user' ? 'User' : 'Nira'}: ${m.content}`).join('\n');
-            const prompt = `${fullSystem}\n\nRecent Chat History:\n${historyText}\n\nUser: ${userMessage}\nNira:`;
-
-            const result = await model.generateContent(prompt);
-            return result.response.text().trim();
-        } catch (err) {
-            console.error('❌ [Gemini Failure]:', err.message);
-            logError('Gemini', err.message);
         }
     }
 
