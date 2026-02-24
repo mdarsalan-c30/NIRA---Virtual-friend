@@ -130,7 +130,15 @@ const Chat = () => {
             );
         } catch (error) {
             console.error('Chat error:', error);
-            setMessages(prev => [...prev, { role: 'error', content: 'Connection hiccup. Try again?' }]);
+            if (error.response && error.response.status === 403 && error.response.data.error === 'TRIAL_ENDED') {
+                setMessages(prev => [...prev, {
+                    role: 'error',
+                    content: error.response.data.message || 'Trial Ended.',
+                    link: error.response.data.link
+                }]);
+            } else {
+                setMessages(prev => [...prev, { role: 'error', content: 'Connection hiccup. Try again?' }]);
+            }
         } finally {
             setLoading(false);
         }
@@ -226,7 +234,7 @@ const Chat = () => {
                             fontWeight: 800,
                             fontSize: '1rem',
                             color: 'white'
-                        }}>NIRA</div>
+                        }}>NYRA</div>
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                             <span style={{ fontSize: '0.75rem', color: isListening ? '#ef4444' : (loading || searching) ? '#6366f1' : '#10b981', fontWeight: 600 }}>
                                 {isListening ? '🎤 Listening' : isSpeaking ? '💬 Speaking' : searching ? '🌐 Searching Web...' : loading ? '💭 Thinking' : '● Online'}
@@ -468,11 +476,12 @@ const Chat = () => {
                             <div key={i} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
                                 <div style={{
                                     maxWidth: '85%', padding: '12px 16px', borderRadius: '20px',
-                                    background: msg.role === 'user' ? '#6366f1' : 'rgba(255,255,255,0.08)',
+                                    background: msg.role === 'user' ? '#6366f1' : msg.role === 'error' ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.08)',
                                     color: 'white', fontSize: '0.9rem', lineHeight: 1.4,
-                                    border: '1px solid rgba(255,255,255,0.05)'
+                                    border: msg.role === 'error' ? '1px solid #ef4444' : '1px solid rgba(255,255,255,0.05)',
+                                    display: 'flex', flexDirection: 'column', gap: '10px'
                                 }}>
-                                    {msg.content.split(/(\[.*?\]\(.*?\))/g).map((part, index) => {
+                                    <div>{msg.content.split(/(\[.*?\]\(.*?\))/g).map((part, index) => {
                                         const match = part.match(/\[(.*?)\]\((.*?)\)/);
                                         if (match) {
                                             return (
@@ -482,7 +491,22 @@ const Chat = () => {
                                             );
                                         }
                                         return part;
-                                    })}
+                                    })}</div>
+
+                                    {msg.link && (
+                                        <a
+                                            href={msg.link}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{
+                                                background: '#ef4444', color: 'white', padding: '10px 15px',
+                                                borderRadius: '12px', textAlign: 'center', textDecoration: 'none',
+                                                fontWeight: 800, fontSize: '0.85rem', marginTop: '5px'
+                                            }}
+                                        >
+                                            UPGRADE TO NIRA PRO 💎
+                                        </a>
+                                    )}
                                 </div>
                             </div>
                         ))}

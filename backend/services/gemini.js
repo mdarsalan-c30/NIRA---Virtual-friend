@@ -26,7 +26,7 @@ const MOCK_RESPONSES = [
 
 const SearchService = require('./SearchService');
 
-async function getChatResponse(userMessage, memory, image = null) {
+async function getChatResponse(userMessage, memory, image = null, globalSettings = null) {
     console.log(`🧠 [Brain] Processing: "${userMessage?.substring(0, 30)}"`);
 
     // Check if we need to search the web (skip if it's an image)
@@ -71,6 +71,11 @@ async function getChatResponse(userMessage, memory, image = null) {
 
     // Inject Founder Knowledge
     fullSystem += `\n\n--- YOUR FOUNDER (MD ARSALAN) ---\n${FOUNDER_KNOWLEDGE}`;
+
+    // Inject Admin Global Prompt if available
+    if (globalSettings && globalSettings.globalPrompt) {
+        fullSystem += `\n\n--- GLOBAL IDENTITY UPDATE ---\n${globalSettings.globalPrompt}`;
+    }
 
     // Inject Search Results if available
     if (searchResults) {

@@ -18,7 +18,9 @@ router.post('/', async (req, res) => {
         // 1. Fetch user data in parallel
         const profileRef = db.collection('users').doc(userId);
 
-        const [profileDoc, emotionalDoc, longTermSnapshot, conversationsSnapshot, stats] = await Promise.all([
+        // 1.5. Fetch Global Settings & User Data in parallel
+        const [settingsDoc, profileDoc, emotionalDoc, longTermSnapshot, conversationsSnapshot, stats] = await Promise.all([
+            db.collection('system').doc('settings').get(),
             profileRef.get(),
             profileRef.collection('emotionalState').doc('current').get(),
             profileRef.collection('longTermMemory').orderBy('timestamp', 'desc').limit(10).get().catch(() => ({ docs: [] })),
@@ -26,22 +28,55 @@ router.post('/', async (req, res) => {
             memoryService.getFriendshipStats(userId)
         ]);
 
+        const globalSettings = settingsDoc.exists ? settingsDoc.data() : { trialLimitMinutes: 5, maintenanceMode: false, globalPrompt: "" };
+        const userData = profileDoc.exists ? profileDoc.data() : {};
+        const isPro = userData.isPro || false;
+        const usedMinutes = userData.usageMinutes || 0;
+
+        // Check if limit exceeded (only for trial users)
+        if (!isPro && usedMinutes >= globalSettings.trialLimitMinutes) {
+            return res.status(403).json({
+                error: 'TRIAL_ENDED',
+                message: "Yaar, hamara free trial khatam ho gaya! 🥺 Kya tum mujhe support karke NIRA Pro me upgrade karoge?",
+                link: "https://mdarsalan.vercel.app/" // Link to founder for payment/upgrade
+            });
+        }
+
         const memory = {
-            identity: profileDoc.exists ? profileDoc.data() : {},
+            identity: userData,
             emotionalState: emotionalDoc.exists ? emotionalDoc.data() : {},
             longTerm: longTermSnapshot.docs.map(doc => doc.data().summary).filter(Boolean),
             recentMessages: conversationsSnapshot.docs.map(doc => doc.data()).reverse(),
             stats
         };
 
-        console.log(`Fetched memory for ${userId}. Messages: ${memory.recentMessages.length}, Facts: ${memory.longTerm.length}`);
+        console.log(`Fetched memory for ${userId}. Used: ${usedMinutes.toFixed(1)} mins. Limit: ${globalSettings.trialLimitMinutes} mins.`);
 
         // 2. Get Gemini response
-        const aiResponse = await getChatResponse(message, memory, image);
+        const aiResponse = await getChatResponse(message, memory, image, globalSettings);
 
         // 3. Save messages in a batch
         const batch = db.batch();
         const userMsgRef = profileRef.collection('conversations').doc();
+
+        // Calculate usage time (delta since last message)
+        let timeIncrement = 0;
+        const lastMsg = memory.recentMessages[memory.recentMessages.length - 1];
+        if (lastMsg && lastMsg.timestamp) {
+            const lastTime = lastMsg.timestamp.toDate ? lastMsg.timestamp.toDate().getTime() : new Date(lastMsg.timestamp).getTime();
+            const nowTime = Date.now();
+            const diffMin = (nowTime - lastTime) / (1000 * 60);
+
+            // Only count if gap is less than 10 mins (active session)
+            if (diffMin < 10) {
+                timeIncrement = diffMin;
+            } else {
+                timeIncrement = 0.5; // Flat 30 sec for a new session start
+            }
+        } else {
+            timeIncrement = 0.5; // First message
+        }
+
         batch.set(userMsgRef, {
             role: 'user',
             content: message,
@@ -56,14 +91,16 @@ router.post('/', async (req, res) => {
             timestamp: admin.firestore.FieldValue.serverTimestamp()
         });
 
-        // Update interaction count and metadata
+        // Update interaction count, usage time and metadata
         const profileUpdate = {
             totalInteractions: admin.firestore.FieldValue.increment(1),
+            usageMinutes: admin.firestore.FieldValue.increment(timeIncrement),
             lastActive: admin.firestore.FieldValue.serverTimestamp()
         };
         // Set createdAt if it doesn't exist (only happens once)
         if (!profileDoc.exists || !profileDoc.data().createdAt) {
             profileUpdate.createdAt = admin.firestore.FieldValue.serverTimestamp();
+            profileUpdate.isPro = false; // Default to trial
         }
         batch.set(profileRef, profileUpdate, { merge: true });
 

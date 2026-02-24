@@ -3,15 +3,18 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyCezi2i9eAreTivaji9GFS15DM4HNhTRQo",
+    apiKey: "AIzaSyAAVrIZXldf7Tjyoz6xugT77dL1i63bc3w",
     authDomain: "nira---virtual-friend.firebaseapp.com",
     projectId: "nira---virtual-friend",
-    storageBucket: "nira---virtual-friend.appspot.com",
-    messagingSenderId: "542283088267",
-    appId: "1:542283088267:web:806ff5e60802c638f37077",
-    measurementId: "G-9K52LWWPWS"
+    storageBucket: "nira---virtual-friend.firebasestorage.app",
+    messagingSenderId: "559263529238",
+    appId: "1:559263529238:web:c7af459902ecb0e04ab837",
+    measurementId: "G-2YFBZGB111"
 };
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+// Add a simple check to ensure its working
+console.log("🔥 Firebase Admin Initialized");
