@@ -91,6 +91,9 @@ const authenticate = async (req, res, next) => {
 };
 
 // Routes
+const { debugErrors } = require('./services/gemini');
+app.get('/api/debug-errors', (req, res) => res.json(debugErrors));
+
 const chatRoutes = require('./routes/chat');
 app.use('/api/chat', authenticate, chatRoutes);
 
