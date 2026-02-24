@@ -32,13 +32,16 @@ const Chat = () => {
 
     useEffect(() => {
         // Reset voice when persona changes if the current voice doesn't match the new gender
-        const currentCategory = voices.female.includes(selectedVoice) ? 'female' : 'male';
+        const currentVoice = selectedVoice;
+        const currentCategory = ['priya', 'ritu', 'pooja', 'neha', 'simran', 'kavya'].includes(currentVoice) ? 'female' : 'male';
         const targetCategory = persona === 'ali' ? 'male' : 'female';
-        if (currentCategory !== targetCategory) {
+
+        // Force Ritu if currently Priya (Migration) or if category mismatch
+        if (currentVoice === 'priya' || currentCategory !== targetCategory) {
             const nextVoice = targetCategory === 'male' ? 'rohan' : 'ritu';
             setSelectedVoice(nextVoice);
         }
-    }, [persona]);
+    }, [persona, selectedVoice]);
 
     const getBaseUrl = () => {
         let url = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
