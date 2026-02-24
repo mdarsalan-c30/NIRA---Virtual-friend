@@ -21,6 +21,7 @@ const Chat = () => {
     const [persona, setPersona] = useState(() => localStorage.getItem('nira_persona') || 'nira');
     const [selectedVoice, setSelectedVoice] = useState(() => localStorage.getItem('nira_voice') || (persona === 'ali' ? 'rohan' : 'ritu'));
     const [showSettings, setShowSettings] = useState(false);
+    const [searching, setSearching] = useState(false);
 
     const messagesEndRef = useRef(null);
     const { speak, listen, isListening } = useVoice();
@@ -78,12 +79,20 @@ const Chat = () => {
         setInput('');
         setLoading(true);
 
+        const triggers = ['weather', 'mausam', 'news', 'khabar', 'taza', 'latest', 'today', 'aaj', 'score', 'match', 'price', 'bhaav', 'rate', 'who is', 'kon hai', 'what is', 'kya hai', 'youtube', 'yt', 'video', 'link', 'sunao', 'play'];
+        if (triggers.some(t => text.toLowerCase().includes(t))) {
+            setSearching(true);
+        }
+
         try {
             const token = await auth.currentUser.getIdToken();
             const response = await axios.post(`${API_URL}/chat`,
                 { message: text },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
+
+            setLoading(false);
+            setSearching(false);
 
             const aiResponse = response.data.response;
             setMessages(prev => [...prev, { role: 'model', content: aiResponse }]);
@@ -202,8 +211,8 @@ const Chat = () => {
                             color: 'white'
                         }}>NIRA</div>
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600 }}>
-                                {isListening ? '🎤 Listening' : isSpeaking ? '💬 Speaking' : loading ? '💭 Thinking' : '● Online'}
+                            <span style={{ fontSize: '0.75rem', color: isListening ? '#ef4444' : (loading || searching) ? '#6366f1' : '#10b981', fontWeight: 600 }}>
+                                {isListening ? '🎤 Listening' : isSpeaking ? '💬 Speaking' : searching ? '🌐 Searching Web...' : loading ? '💭 Thinking' : '● Online'}
                             </span>
                         </div>
                     </div>
@@ -446,10 +455,23 @@ const Chat = () => {
                                     color: 'white', fontSize: '0.9rem', lineHeight: 1.4,
                                     border: '1px solid rgba(255,255,255,0.05)'
                                 }}>
-                                    {msg.content}
+                                    {msg.content.split(/(\[.*?\]\(.*?\))/g).map((part, index) => {
+                                        const match = part.match(/\[(.*?)\]\((.*?)\)/);
+                                        if (match) {
+                                            return (
+                                                <a key={index} href={match[2]} target="_blank" rel="noopener noreferrer" style={{ color: '#8b5cf6', textDecoration: 'underline', fontWeight: 600 }}>
+                                                    {match[1]}
+                                                </a>
+                                            );
+                                        }
+                                        return part;
+                                    })}
                                 </div>
                             </div>
                         ))}
+                        {messages.length > 0 && messages[messages.length - 1].role === 'model' && (
+                            <LinkPreview text={messages[messages.length - 1].content} />
+                        )}
                         <div ref={messagesEndRef} />
                     </main>
 

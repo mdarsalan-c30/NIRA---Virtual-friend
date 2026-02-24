@@ -24,7 +24,7 @@ class SearchService {
             });
 
             if (response.data && response.data.results) {
-                const results = response.data.results.map(r => `- ${r.title}: ${r.content}`).join('\n');
+                const results = response.data.results.map(r => `[${r.title}](${r.url}): ${r.content}`).join('\n');
                 console.log("✅ [SearchService] Search successful.");
                 return results;
             }
@@ -41,7 +41,8 @@ class SearchService {
     shouldSearch(message) {
         const triggers = [
             'weather', 'mausam', 'news', 'khabar', 'taza', 'latest', 'today', 'aaj',
-            'score', 'match', 'price', 'bhaav', 'rate', 'who is', 'kon hai', 'what is', 'kya hai'
+            'score', 'match', 'price', 'bhaav', 'rate', 'who is', 'kon hai', 'what is', 'kya hai',
+            'youtube', 'yt', 'video', 'link', 'sunao', 'play'
         ];
         const lowerMsg = message.toLowerCase();
         return triggers.some(t => lowerMsg.includes(t)) && (lowerMsg.length > 5);
