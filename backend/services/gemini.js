@@ -9,6 +9,15 @@ Link Rule: When sharing info from the web (YouTube, News, etc.), ALWAYS include 
 Keep responses concise (2-3 sentences). Use friendly filler words like 'yaar', 'hai na', 'bilkul'.
 Never mention you are an AI. Stick to your persona as Nira (or Ali if requested).`;
 
+const FOUNDER_KNOWLEDGE = `
+NIRA was founded by Md Arsalan (Founder & Product Architect).
+Md Arsalan is a B.Tech CSE graduate and technology-driven entrepreneur from India.
+He has built platforms like PDFVerse (Utility SaaS), ClimateVerse (Climate tech), and Nyra (Emotional AI).
+Vision: To build intelligent, scalable digital ecosystems that merge AI with human-centered design.
+Current projects: Nyra (AI Avatar) and MyCollegeVerse (Student OS).
+Portfolio: https://mdarsalan.vercel.app/
+`;
+
 const MOCK_RESPONSES = [
     "Arre yaar, thoda network ka chakar hai. Kya bol rahe the tum?",
     "Main sun rahi hoon, bas thodi connectivity issue hai. Phir se bolo?",
@@ -59,6 +68,9 @@ async function getChatResponse(userMessage, memory) {
 
     const contextStr = contextParts.join('\n\n');
     let fullSystem = SYSTEM_PROMPT + (contextStr ? `\n\n--- FRIENDSHIP CONTEXT ---\n${contextStr}` : '');
+
+    // Inject Founder Knowledge
+    fullSystem += `\n\n--- YOUR FOUNDER (MD ARSALAN) ---\n${FOUNDER_KNOWLEDGE}`;
 
     // Inject Search Results if available
     if (searchResults) {

@@ -15,13 +15,28 @@ export const useVoice = () => {
         }
     }, []);
 
+    const sanitizeTextForTTS = (text) => {
+        if (!text) return "";
+        // 1. Replace Markdown links [Title](URL) with just Title
+        let cleanText = text.replace(/\[(.*?)\]\((.*?)\)/g, "$1");
+        // 2. Remove raw URLs
+        cleanText = cleanText.replace(/https?:\/\/\S+/g, "");
+        // 3. Simple cleanup for extra spaces
+        return cleanText.trim();
+    };
+
     const speak = useCallback(async (text, onStart, onEnd, lang = 'en', speaker = 'priya', gender = 'female') => {
         stop(); // Always stop previous audio first
+        const ttsText = sanitizeTextForTTS(text);
+        if (!ttsText) {
+            if (onEnd) onEnd();
+            return;
+        }
 
         // Fallback to Browser TTS
         const browserFallback = () => {
             if (!window.speechSynthesis) return;
-            const utterance = new SpeechSynthesisUtterance(text);
+            const utterance = new SpeechSynthesisUtterance(ttsText);
             const voices = window.speechSynthesis.getVoices();
             let preferredVoice;
 
@@ -62,9 +77,10 @@ export const useVoice = () => {
             console.group("🎙️ NIRA VOICE SYSTEM");
             console.log(`Endpoint: ${apiUrl}/tts`);
             console.log(`Requesting: ${targetSpeaker} (${lang})`);
+            console.log(`Text (Sanitized): ${ttsText}`);
 
             const response = await axios.post(`${apiUrl}/tts`, {
-                text,
+                text: ttsText,
                 languageCode: lang === 'hi' ? 'hi-IN' : 'en-IN',
                 speaker: targetSpeaker
             }, {
