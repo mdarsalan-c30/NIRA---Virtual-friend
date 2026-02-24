@@ -13,9 +13,22 @@ const MOCK_RESPONSES = [
 ];
 
 async function getChatResponse(userMessage, memory) {
-    const recentStr = (memory.recentMessages || [])
-        .slice(-8)
-        .map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content }));
+    // Sanitize and format history: alternating user/assistant, no consecutive same roles
+    const recentStr = [];
+    let lastRole = null;
+
+    (memory.recentMessages || []).slice(-10).forEach(m => {
+        const role = m.role === 'user' ? 'user' : 'assistant';
+        if (role !== lastRole && m.content) {
+            recentStr.push({ role, content: m.content });
+            lastRole = role;
+        }
+    });
+
+    // Ensure the last message in history is not 'user' if we are about to add a new 'user' message
+    if (recentStr.length > 0 && recentStr[recentStr.length - 1].role === 'user') {
+        recentStr.pop();
+    }
 
     const contextParts = [];
     if (memory.identity?.name) contextParts.push(`The user's name is ${memory.identity.name}.`);
@@ -50,7 +63,8 @@ async function getChatResponse(userMessage, memory) {
             const text = completion.choices[0]?.message?.content?.trim();
             if (text) return text;
         } catch (err) {
-            console.warn('⚠️ Groq failed:', err.message?.substring(0, 50));
+            console.error('❌ [Groq Failure]:', err.message);
+            if (err.status === 429) console.error('Rate limited. Waiting...');
         }
     }
 
@@ -58,16 +72,16 @@ async function getChatResponse(userMessage, memory) {
     if (process.env.GEMINI_API_KEY) {
         try {
             const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-            const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
+            const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-            // Format recent history for Gemini
-            const historyText = recentStr.map(m => `${m.role}: ${m.content}`).join('\n');
-            const prompt = `${fullSystem}\n\nRecent Chat History:\n${historyText}\n\nUser: ${userMessage}\nNIRA/ALI:`;
+            // Format recent history for Gemini (more stable prompt format)
+            const historyText = recentStr.map(m => `${m.role === 'user' ? 'User' : 'Nira'}: ${m.content}`).join('\n');
+            const prompt = `${fullSystem}\n\nRecent Chat History:\n${historyText}\n\nUser: ${userMessage}\nNira:`;
 
             const result = await model.generateContent(prompt);
             return result.response.text().trim();
         } catch (err) {
-            console.warn('⚠️ Gemini failed:', err.message?.substring(0, 50));
+            console.error('❌ [Gemini Failure]:', err.message);
         }
     }
 

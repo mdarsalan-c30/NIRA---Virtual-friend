@@ -19,7 +19,7 @@ const Chat = () => {
     const isMobile = window.innerWidth < 768;
     const [language, setLanguage] = useState(() => localStorage.getItem('nira_lang') || (isMobile ? 'hi' : 'en'));
     const [persona, setPersona] = useState(() => localStorage.getItem('nira_persona') || 'nira');
-    const [selectedVoice, setSelectedVoice] = useState(() => localStorage.getItem('nira_voice') || (isMobile ? 'ritu' : (persona === 'ali' ? 'rohan' : 'priya')));
+    const [selectedVoice, setSelectedVoice] = useState(() => localStorage.getItem('nira_voice') || (isMobile ? 'ritu' : (persona === 'ali' ? 'rohan' : 'ritu')));
     const [showSettings, setShowSettings] = useState(false);
 
     const messagesEndRef = useRef(null);
@@ -35,7 +35,7 @@ const Chat = () => {
         const currentCategory = voices.female.includes(selectedVoice) ? 'female' : 'male';
         const targetCategory = persona === 'ali' ? 'male' : 'female';
         if (currentCategory !== targetCategory) {
-            const nextVoice = targetCategory === 'male' ? 'rohan' : 'priya';
+            const nextVoice = targetCategory === 'male' ? 'rohan' : 'ritu';
             setSelectedVoice(nextVoice);
         }
     }, [persona]);
