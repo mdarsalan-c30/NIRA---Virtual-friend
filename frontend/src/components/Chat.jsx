@@ -616,3 +616,35 @@ const settingLabelStyle = {
 };
 
 export default Chat;
+
+const LinkPreview = ({ text }) => {
+    const linkMatch = text.match(/\[(.*?)\]\((.*?)\)/);
+    if (!linkMatch) return null;
+
+    const [title, url] = [linkMatch[1], linkMatch[2]];
+    const isYoutube = url.includes('youtube.com') || url.includes('youtu.be');
+
+    return (
+        <div style={{
+            margin: '5px 0 15px', padding: '12px', borderRadius: '15px',
+            background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
+            maxWidth: '90%', alignSelf: 'flex-start', display: 'flex', gap: '12px'
+        }}>
+            <div style={{
+                width: '40px', height: '40px', borderRadius: '8px',
+                background: isYoutube ? '#ef4444' : '#6366f1',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+            }}>
+                <Sparkles size={18} color="white" />
+            </div>
+            <div style={{ overflow: 'hidden' }}>
+                <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {title}
+                </p>
+                <a href={url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.75rem', color: '#8b5cf6', textDecoration: 'none' }}>
+                    Open {isYoutube ? 'Video' : 'Link'} ➜
+                </a>
+            </div>
+        </div>
+    );
+};
