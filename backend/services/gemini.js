@@ -86,9 +86,9 @@ async function getChatResponse(userMessage, memory, image = null, globalSettings
     // --- PRIMARY: Gemini (Fast & Stable) ---
     if (process.env.GEMINI_API_KEY) {
         try {
-            console.log("🧠 [Brain] Attempting Gemini Flash (Primary)...");
             const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-            const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
+            const modelName = 'gemini-2.5-flash';
+            const model = genAI.getGenerativeModel({ model: modelName });
 
             // Format recent history for Gemini
             const historyText = recentStr.map(m => `${m.role === 'user' ? 'User' : 'Nira'}: ${m.content}`).join('\n');
@@ -105,13 +105,13 @@ async function getChatResponse(userMessage, memory, image = null, globalSettings
                         data: base64Data
                     }
                 });
-                console.log("📸 [Brain] Including image in prompt.");
+                console.log(`📸 [Brain] Including image in prompt for ${modelName}.`);
             }
 
             const result = await model.generateContent(promptParts);
             const text = result.response.text().trim();
             if (text) {
-                console.log("✅ [Brain] Gemini Success.");
+                console.log(`✅ [Brain] ${modelName} Success.`);
                 HealthService.logStatus('Gemini', 'SUCCESS');
                 return text;
             }
