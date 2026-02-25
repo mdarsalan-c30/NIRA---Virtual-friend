@@ -89,8 +89,6 @@ const db = admin.firestore();
 // Initialize Telegram Bot
 require('./services/telegram');
 
-const PORT = process.env.PORT || 5000;
-
 app.get('/', (req, res) => {
     res.send('NIRA Backend is running. ✅');
 });
