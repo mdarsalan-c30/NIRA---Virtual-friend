@@ -6,7 +6,10 @@ import { Mic, Send, LogOut, Maximize2, Minimize2, Sparkles, MessageCircle } from
 import NiraAvatar from './NiraAvatar';
 
 const Chat = () => {
-    const [messages, setMessages] = useState([]);
+    const [messages, setMessages] = useState(() => {
+        const saved = sessionStorage.getItem('nira_messages');
+        return saved ? JSON.parse(saved) : [];
+    });
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
@@ -24,6 +27,7 @@ const Chat = () => {
     const [searching, setSearching] = useState(false);
     const [selectedImage, setSelectedImage] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
+    const wakeLockRef = useRef(null);
 
     const messagesEndRef = useRef(null);
     const { speak, stop, listen, isListening } = useVoice();
@@ -32,6 +36,45 @@ const Chat = () => {
         female: ['priya', 'ritu', 'pooja', 'neha', 'simran', 'kavya'],
         male: ['rohan', 'aditya', 'rahul', 'amit', 'dev', 'varun']
     };
+
+    // Screen Wake Lock Logic
+    const requestWakeLock = async () => {
+        if ('wakeLock' in navigator) {
+            try {
+                wakeLockRef.current = await navigator.wakeLock.request('screen');
+                console.log('✅ Wake Lock is active');
+                wakeLockRef.current.addEventListener('release', () => {
+                    console.log('🔓 Wake Lock was released');
+                });
+            } catch (err) {
+                console.error(`${err.name}, ${err.message}`);
+            }
+        }
+    };
+
+    const releaseWakeLock = () => {
+        if (wakeLockRef.current !== null) {
+            wakeLockRef.current.release();
+            wakeLockRef.current = null;
+        }
+    };
+
+    useEffect(() => {
+        requestWakeLock();
+
+        const handleVisibilityChange = async () => {
+            if (wakeLockRef.current !== null && document.visibilityState === 'visible') {
+                await requestWakeLock();
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            releaseWakeLock();
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, []);
 
     useEffect(() => {
         // Reset voice when persona changes if the current voice doesn't match the new gender
@@ -72,7 +115,10 @@ const Chat = () => {
     useEffect(() => { localStorage.setItem('nira_lang', language); }, [language]);
     useEffect(() => { localStorage.setItem('nira_persona', persona); }, [persona]);
     useEffect(() => { localStorage.setItem('nira_voice', selectedVoice); }, [selectedVoice]);
-    useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        sessionStorage.setItem('nira_messages', JSON.stringify(messages));
+    }, [messages]);
 
     const handleImageUpload = (e) => {
         const file = e.target.files[0];
@@ -143,6 +189,7 @@ const Chat = () => {
             setLoading(false);
         }
     };
+
 
     const headerBtnStyle = {
         background: 'rgba(255,255,255,0.08)',
