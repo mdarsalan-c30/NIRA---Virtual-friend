@@ -46,6 +46,7 @@ const AdminDashboard = () => {
                     <NavItem icon={<Users size={20} />} label="Users" active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
                     <NavItem icon={<Activity size={20} />} label="System" active={activeTab === 'system'} onClick={() => setActiveTab('system')} />
                     <NavItem icon={<Settings size={20} />} label="Identity" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
+                    <NavItem icon={<ShieldAlert size={20} />} label="API Health" active={activeTab === 'api-health'} onClick={() => setActiveTab('api-health')} />
                 </nav>
                 <button onClick={() => signOut(auth)} style={logoutStyle}><LogOut size={18} /> Logout</button>
                 <div style={{ padding: '20px', fontSize: '0.7rem', color: 'rgba(255,255,255,0.2)', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: 'auto' }}>
@@ -136,6 +137,10 @@ const AdminDashboard = () => {
 
                 {activeTab === 'settings' && (
                     <IdentitySettings />
+                )}
+
+                {activeTab === 'api-health' && (
+                    <ApiHealthStatus />
                 )}
             </div>
         </div>
@@ -322,6 +327,70 @@ const IdentitySettings = () => {
             >
                 {saving ? 'Syncing...' : 'Save Identity Changes'}
             </button>
+        </div>
+    );
+};
+
+const ApiHealthStatus = () => {
+    const [status, setStatus] = useState({});
+
+    useEffect(() => {
+        const unsubscribe = onSnapshot(doc(db, 'system', 'api_status'), (snap) => {
+            if (snap.exists()) setStatus(snap.data());
+        });
+        return unsubscribe;
+    }, []);
+
+    const services = ['Gemini', 'Groq', 'Sarvam'];
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={cardStyle}>
+                <h3 style={{ marginBottom: '15px' }}>Global API Health Status</h3>
+                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', marginBottom: '20px' }}>
+                    Monitor real-time health of core AI services. Green means all systems are go.
+                </p>
+                <div style={tableStyle}>
+                    {services.map(srv => {
+                        const s = status[srv] || { status: 'UNKNOWN', lastUsed: 'Never' };
+                        const isRed = s.status === 'ERROR';
+                        return (
+                            <div key={srv} style={{ ...userRowStyle, flexDirection: 'column', gap: '8px', padding: '20px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>{srv}</div>
+                                    <div style={{
+                                        padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700,
+                                        background: isRed ? 'rgba(239,68,68,0.1)' : (s.status === 'SUCCESS' ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.05)'),
+                                        color: isRed ? '#ef4444' : (s.status === 'SUCCESS' ? '#10b981' : 'rgba(255,255,255,0.4)')
+                                    }}>
+                                        {s.status}
+                                    </div>
+                                </div>
+                                <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)' }}>
+                                    Last Attempt: {s.lastUsed ? new Date(s.lastUsed).toLocaleString() : 'Never'}
+                                </div>
+                                {s.lastError && (
+                                    <div style={{
+                                        marginTop: '10px', padding: '12px', background: 'rgba(239,68,68,0.05)',
+                                        borderRadius: '8px', fontSize: '0.75rem', color: '#fda4af', border: '1px solid rgba(239,68,68,0.1)',
+                                        fontFamily: 'monospace', wordBreak: 'break-all'
+                                    }}>
+                                        <strong>Error:</strong> {s.lastError}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+
+            <div style={{ ...cardStyle, background: 'rgba(99,102,241,0.05)', border: '1px dashed rgba(99,102,241,0.2)' }}>
+                <h4 style={{ color: '#818cf8', margin: '0 0 10px 0' }}>💡 Admin Tip</h4>
+                <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', margin: 0 }}>
+                    If a service shows <strong>ERROR</strong> (Red), check your Render environment variables or renew your API keys.
+                    NIRA will automatically fallback to healthy services where possible.
+                </p>
+            </div>
         </div>
     );
 };

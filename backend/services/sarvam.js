@@ -1,4 +1,5 @@
 const axios = require('axios');
+const HealthService = require('./HealthService');
 
 const generateTTS = async (text, languageCode = 'hi-IN', speaker = 'priya') => {
     const apiKey = process.env.SARVAM_API_KEY;
@@ -29,12 +30,15 @@ const generateTTS = async (text, languageCode = 'hi-IN', speaker = 'priya') => {
         });
 
         if (response.data && response.data.audios && response.data.audios[0]) {
+            HealthService.logStatus('Sarvam', 'SUCCESS');
             return response.data.audios[0]; // This is typically a base64 encoded audio string
         } else {
             throw new Error('Invalid response from Sarvam AI');
         }
     } catch (error) {
-        console.error('Sarvam AI TTS Error:', error.response ? error.response.data : error.message);
+        const errorMsg = error.response ? JSON.stringify(error.response.data) : error.message;
+        console.error('Sarvam AI TTS Error:', errorMsg);
+        HealthService.logStatus('Sarvam', 'ERROR', errorMsg);
         throw error;
     }
 };

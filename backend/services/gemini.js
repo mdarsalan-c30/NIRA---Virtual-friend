@@ -25,6 +25,7 @@ const MOCK_RESPONSES = [
 ];
 
 const SearchService = require('./SearchService');
+const HealthService = require('./HealthService');
 
 async function getChatResponse(userMessage, memory, image = null, globalSettings = null) {
     console.log(`🧠 [Brain] Processing: "${userMessage?.substring(0, 30)}"`);
@@ -111,10 +112,12 @@ async function getChatResponse(userMessage, memory, image = null, globalSettings
             const text = result.response.text().trim();
             if (text) {
                 console.log("✅ [Brain] Gemini Success.");
+                HealthService.logStatus('Gemini', 'SUCCESS');
                 return text;
             }
         } catch (err) {
             console.error('❌ [Gemini Failure]:', err.message);
+            HealthService.logStatus('Gemini', 'ERROR', err);
         }
     }
 
@@ -136,10 +139,12 @@ async function getChatResponse(userMessage, memory, image = null, globalSettings
             const text = completion.choices[0]?.message?.content?.trim();
             if (text) {
                 console.log("✅ [Brain] Groq Success.");
+                HealthService.logStatus('Groq', 'SUCCESS');
                 return text;
             }
         } catch (err) {
             console.error('❌ [Groq Failure]:', err.message);
+            HealthService.logStatus('Groq', 'ERROR', err);
         }
     }
 
