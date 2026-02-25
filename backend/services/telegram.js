@@ -127,11 +127,20 @@ class TelegramService {
             }
         });
 
-        try {
-            this.bot.launch();
-            console.log("🚀 [Telegram] Bot is running with Governance...");
-        } catch (err) {
-            console.error("❌ [Telegram] Failed to launch bot:", err.message);
+        // In development, we skip bot.launch() to avoid conflicts with the production instance on Render.
+        // If you REALLY want to run it locally, set START_TELEGRAM_LOCAL=true in your .env
+        const isProduction = process.env.NODE_ENV === 'production';
+        const forceLocal = process.env.START_TELEGRAM_LOCAL === 'true';
+
+        if (isProduction || forceLocal) {
+            try {
+                this.bot.launch();
+                console.log(`🚀 [Telegram] Bot is running (${isProduction ? 'Production' : 'Local Force'})...`);
+            } catch (err) {
+                console.error("❌ [Telegram] Failed to launch bot:", err.message);
+            }
+        } else {
+            console.log("ℹ️ [Telegram] Bot launch skipped in Local Dev to avoid conflict with Render. (Set START_TELEGRAM_LOCAL=true to override)");
         }
 
         // Enable graceful stop

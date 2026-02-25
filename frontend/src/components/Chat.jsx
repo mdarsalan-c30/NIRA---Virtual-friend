@@ -582,7 +582,7 @@ const Chat = () => {
                             onClick={() => listen(handleSend, language)}
                             style={{
                                 width: '85px', height: '85px',
-                                borderRadius: '50%', background: isListening ? '#ef4444' : '#6366f1', color: 'white', border: 'none',
+                                borderRadius: '50%', background: isListening ? '#ef4444' : '#6366f1', color: 'white',
                                 boxShadow: `0 20px 40px ${isListening ? 'rgba(239,68,68,0.5)' : 'rgba(99,102,241,0.5)'}`,
                                 zIndex: 150, cursor: 'pointer', pointerEvents: 'auto',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',

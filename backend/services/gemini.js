@@ -88,7 +88,7 @@ async function getChatResponse(userMessage, memory, image = null, globalSettings
         try {
             console.log("🧠 [Brain] Attempting Gemini Flash (Primary)...");
             const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-            const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+            const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
             // Format recent history for Gemini
             const historyText = recentStr.map(m => `${m.role === 'user' ? 'User' : 'Nira'}: ${m.content}`).join('\n');
