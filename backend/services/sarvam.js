@@ -9,16 +9,16 @@ const generateTTS = async (text, languageCode = 'hi-IN', speaker = 'priya') => {
 
     try {
         // Sarvam AI strictly requires lowercase speaker names.
-        // We also explicitly use 'bulbul:v3' to enable speakers like 'priya' and 'rohan'.
+        // We use 'bulbul:v2' as it is the only model currently processing billing for this account.
         const formattedSpeaker = speaker.toLowerCase();
 
-        console.log(`🎙️ [Backend] Requesting Sarvam TTS: Model=bulbul:v3, Speaker=${formattedSpeaker}, Lang=${languageCode}`);
+        console.log(`🎙️ [Backend] Requesting Sarvam TTS: Model=bulbul:v2, Speaker=${formattedSpeaker}, Lang=${languageCode}`);
 
         const response = await axios.post('https://api.sarvam.ai/text-to-speech', {
             inputs: [text],
             target_language_code: languageCode,
             speaker: formattedSpeaker,
-            model: 'bulbul:v3',
+            model: 'bulbul:v2',
             pace: 1.0,
             speech_sample_rate: 16000
         }, {

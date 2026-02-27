@@ -73,7 +73,7 @@ export const useVoice = () => {
             if (apiUrl.endsWith('/')) apiUrl = apiUrl.slice(0, -1);
             if (!apiUrl.endsWith('/api')) apiUrl += '/api';
 
-            const targetSpeaker = speaker || (gender === 'male' ? 'rohan' : 'ritu');
+            const targetSpeaker = speaker || (gender === 'male' ? 'abhilash' : 'anushka');
             console.group("🎙️ NIRA VOICE SYSTEM");
             console.log(`Endpoint: ${apiUrl}/tts`);
             console.log(`Requesting: ${targetSpeaker} (${lang})`);

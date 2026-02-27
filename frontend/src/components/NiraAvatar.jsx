@@ -38,7 +38,6 @@ const DigitalEntity = ({ isSpeaking, isListening, isThinking }) => {
 
     return (
         <group position={[0, 0, 0]}>
-            {/* The Head - Crystalline Digital Sphere */}
             <mesh ref={headRef} position={[0, 0, 0]}>
                 <sphereGeometry args={[1, 64, 64]} />
                 <MeshDistortMaterial
@@ -52,8 +51,6 @@ const DigitalEntity = ({ isSpeaking, isListening, isThinking }) => {
                     speed={2}
                 />
             </mesh>
-
-            {/* Eyes - Emissive Digital Orbs */}
             <mesh ref={leftEyeRef} position={[-0.35, 0.2, 0.85]}>
                 <sphereGeometry args={[0.08, 32, 32]} />
                 <meshStandardMaterial color="white" emissive={primaryColor} emissiveIntensity={emissiveInt} />
@@ -62,26 +59,14 @@ const DigitalEntity = ({ isSpeaking, isListening, isThinking }) => {
                 <sphereGeometry args={[0.08, 32, 32]} />
                 <meshStandardMaterial color="white" emissive={primaryColor} emissiveIntensity={emissiveInt} />
             </mesh>
-
-            {/* Mouth - Responsive Sound Wave Viseme */}
             <mesh ref={mouthRef} position={[0, -0.4, 0.9]}>
                 <capsuleGeometry args={[0.03, 0.3, 4, 16]} />
                 <meshStandardMaterial color="white" emissive={primaryColor} emissiveIntensity={emissiveInt * 2} />
             </mesh>
-
-            {/* Neck / Torso Base */}
             <mesh position={[0, -1.8, -0.2]}>
                 <cylinderGeometry args={[0.4, 0.8, 2, 32]} />
-                <meshStandardMaterial
-                    color="#0a0a0f"
-                    transparent
-                    opacity={0.8}
-                    roughness={0}
-                    metalness={1}
-                />
+                <meshStandardMaterial color="#0a0a0f" transparent opacity={0.8} roughness={0} metalness={1} />
             </mesh>
-
-            {/* Floating Particles/Data Halo */}
             <Float speed={2} rotationIntensity={1} floatIntensity={1}>
                 <mesh position={[0, 0, -1]} rotation={[Math.PI / 2, 0, 0]}>
                     <torusGeometry args={[1.5, 0.01, 16, 100]} />
@@ -92,27 +77,148 @@ const DigitalEntity = ({ isSpeaking, isListening, isThinking }) => {
     );
 };
 
-// --- Portrait Camera Setup ---
+// --- Camera Setup ---
 const Rig = () => {
     const { camera, mouse, size } = useThree();
     const isMobile = size.width < 768;
-
     useFrame(() => {
-        // Subtle camera follow
         camera.position.x = THREE.MathUtils.lerp(camera.position.x, mouse.x * 0.1, 0.05);
         camera.position.y = THREE.MathUtils.lerp(camera.position.y, mouse.y * 0.1, 0.05);
-
-        // Dynamic FOV adjustment for vertical screens
         const aspect = size.width / size.height;
         camera.fov = aspect < 1 ? 45 : 35;
         camera.updateProjectionMatrix();
-
         camera.lookAt(0, isMobile ? 0.4 : 0.2, 0);
     });
     return null;
 };
 
-const NiraAvatar = ({ isSpeaking = false, isListening = false, isThinking = false, isFullScreen = false, immersionMode = false }) => {
+// --- Cute Entity ---
+const CuteEntity = ({ isSpeaking, isListening, mood, statusColor }) => {
+    const groupRef = useRef();
+    const mouthRef = useRef();
+    const auraRef = useRef();
+    useFrame((state) => {
+        const time = state.clock.getElapsedTime();
+        if (groupRef.current) {
+            groupRef.current.position.y = Math.sin(time * 0.8) * 0.05;
+            groupRef.current.rotation.z = Math.sin(time * 0.4) * 0.02;
+        }
+        if (mouthRef.current) {
+            const mouthScale = isSpeaking ? (0.2 + Math.abs(Math.sin(time * 20)) * 1.8) : 0.1;
+            mouthRef.current.scale.y = THREE.MathUtils.lerp(mouthRef.current.scale.y, mouthScale, 0.3);
+        }
+        if (auraRef.current) {
+            auraRef.current.rotation.z = time * 0.2;
+            auraRef.current.scale.setScalar(1 + Math.sin(time * 2) * 0.05);
+        }
+    });
+    return (
+        <group ref={groupRef}>
+            <mesh scale={[1.2, 1, 1]}>
+                <sphereGeometry args={[1, 64, 64]} />
+                <MeshWobbleMaterial color={statusColor} factor={mood === 'HAPPY' || mood === 'CUTE' ? 0.6 : 0.3} speed={2} roughness={0} metalness={0.5} />
+            </mesh>
+            <mesh ref={mouthRef} position={[0, -0.35, 0.95]}>
+                <capsuleGeometry args={[0.04, 0.4, 4, 16]} />
+                <meshStandardMaterial color="white" emissive="white" emissiveIntensity={2} />
+            </mesh>
+            <mesh position={[-0.35, 0.2, 0.9]}>
+                <sphereGeometry args={[0.12, 32, 32]} />
+                <meshStandardMaterial color="white" emissive="white" emissiveIntensity={1} />
+            </mesh>
+            <mesh position={[0.35, 0.2, 0.9]}>
+                <sphereGeometry args={[0.12, 32, 32]} />
+                <meshStandardMaterial color="white" emissive="white" emissiveIntensity={1} />
+            </mesh>
+            <mesh ref={auraRef} rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -0.5]}>
+                <torusGeometry args={[1.4, 0.02, 16, 100]} />
+                <meshBasicMaterial color={statusColor} transparent opacity={0.3} />
+            </mesh>
+        </group>
+    );
+};
+
+// --- 2. Chibi Anime Entity (Refined Ultra Cute) ---
+const ChibiEntity = ({ isSpeaking, isListening, mood, statusColor }) => {
+    const headRef = useRef();
+    const eyesRef = useRef();
+    const mouthRef = useRef();
+
+    useFrame((state) => {
+        const time = state.clock.getElapsedTime();
+        if (headRef.current) {
+            headRef.current.position.y = Math.sin(time * 1.5) * 0.02;
+            headRef.current.rotation.z = Math.sin(time * 0.5) * 0.01;
+        }
+        if (eyesRef.current) {
+            const blink = (Math.sin(time * 0.4) > 0.98 || (time % 5 < 0.1)) ? 0.1 : 1.1;
+            eyesRef.current.scale.y = THREE.MathUtils.lerp(eyesRef.current.scale.y, blink, 0.2);
+        }
+        if (mouthRef.current) {
+            const scale = isSpeaking ? (0.5 + Math.abs(Math.sin(time * 15)) * 1.5) : 0.5;
+            mouthRef.current.scale.y = THREE.MathUtils.lerp(mouthRef.current.scale.y, scale, 0.3);
+        }
+    });
+
+    return (
+        <group ref={headRef}>
+            {/* Swapped Color: Pink Face */}
+            <mesh scale={[1.1, 1, 1.05]}>
+                <sphereGeometry args={[1, 64, 64]} />
+                <meshStandardMaterial color="#ffb6c1" roughness={0.3} metalness={0.1} />
+            </mesh>
+
+            {/* Swapped Color: Light Glossy Eyes with Black Pupils */}
+            <group ref={eyesRef} position={[0, 0.2, 0.85]}>
+                {[-0.4, 0.4].map((x, i) => (
+                    <mesh key={i} position={[x, 0, 0]}>
+                        <sphereGeometry args={[0.25, 32, 32]} />
+                        <meshPhongMaterial color="#fff5f5" emissive="#ffffff" emissiveIntensity={0.3} shininess={100} />
+
+                        {/* SMALL BLACK PUPILS */}
+                        <mesh position={[0, 0, 0.22]}>
+                            <sphereGeometry args={[0.08, 16, 16]} />
+                            <meshBasicMaterial color="#000000" />
+                        </mesh>
+
+                        {/* Specular Highlight */}
+                        <mesh position={[0.08, 0.08, 0.25]}>
+                            <sphereGeometry args={[0.04, 16, 16]} />
+                            <meshBasicMaterial color="white" />
+                        </mesh>
+                    </mesh>
+                ))}
+            </group>
+
+            {/* Heart-Shaped Mouth */}
+            <mesh ref={mouthRef} position={[0, -0.3, 0.95]} rotation={[0, 0, Math.PI / 4]}>
+                <capsuleGeometry args={[0.02, 0.1, 4, 16]} />
+                <meshBasicMaterial color="#ff4d6d" />
+            </mesh>
+
+            {/* Permanent Subtle Blush */}
+            <group position={[0, -0.1, 0.88]}>
+                <mesh position={[-0.55, 0, 0]}>
+                    <planeGeometry args={[0.25, 0.12]} />
+                    <meshBasicMaterial color="#ff69b4" transparent opacity={0.3} />
+                </mesh>
+                <mesh position={[0.55, 0, 0]}>
+                    <planeGeometry args={[0.25, 0.12]} />
+                    <meshBasicMaterial color="#ff69b4" transparent opacity={0.3} />
+                </mesh>
+            </group>
+
+            {/* Soft AI Glow */}
+            <mesh scale={1.15}>
+                <sphereGeometry args={[1, 32, 32]} />
+                <meshBasicMaterial color={statusColor} transparent opacity={0.1} side={THREE.BackSide} />
+            </mesh>
+        </group>
+    );
+};
+
+// --- Main Avatar Component ---
+const NiraAvatar = ({ isSpeaking = false, isListening = false, isThinking = false, isFullScreen = false, immersionMode = false, persona = 'nira', avatarType = 'digital', mood = 'NEUTRAL' }) => {
     const statusColor = isListening ? '#10b981' : isSpeaking ? '#8b5cf6' : '#6366f1';
     const isMobile = window.innerWidth < 768;
 
@@ -120,48 +226,37 @@ const NiraAvatar = ({ isSpeaking = false, isListening = false, isThinking = fals
         <div style={{
             width: '100%', height: isFullScreen ? '100vh' : '400px',
             position: isFullScreen ? 'fixed' : 'relative',
-            background: 'radial-gradient(circle at center, #0f0c29, #0a0a25, #000000)',
-            transition: 'all 0.5s'
+            background: avatarType === 'cute' ? 'radial-gradient(circle at center, #2e1a2e, #0a1a14, #000000)' : 'radial-gradient(circle at center, #0f0c29, #0a0a25, #000000)',
+            transition: 'all 1s'
         }}>
-            <Canvas
-                shadows
-                camera={{ position: [0, 0.2, 2.8], fov: isMobile ? 45 : 35 }}
-                gl={{ antialias: true }}
-            >
+            <Canvas shadows camera={{ position: [0, 0.2, isMobile ? 3.5 : 2.8], fov: isMobile ? 40 : 35 }} gl={{ antialias: true }}>
                 <color attach="background" args={['#010103']} />
                 <fog attach="fog" args={['#010103', 5, 10]} />
-
-                <ambientLight intensity={0.2} />
+                <ambientLight intensity={0.4} />
                 <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={2} castShadow />
                 <pointLight position={[-2, 2, 2]} intensity={1} color={statusColor} />
-
                 <Suspense fallback={null}>
-                    <group position={[0, isMobile ? -0.5 : -0.2, 0]} scale={isMobile ? 1 : 1.2}>
-                        <DigitalEntity
-                            isSpeaking={isSpeaking}
-                            isListening={isListening}
-                            isThinking={isThinking}
-                        />
+                    <group position={[0, isMobile ? 0.1 : -0.2, 0]} scale={isMobile ? 0.9 : 1.2}>
+                        {avatarType === 'cute' ? (
+                            <CuteEntity isSpeaking={isSpeaking} isListening={isListening} mood={mood} statusColor={statusColor} />
+                        ) : avatarType === 'chibi' ? (
+                            <ChibiEntity isSpeaking={isSpeaking} isListening={isListening} mood={mood} statusColor={statusColor} />
+                        ) : (
+                            <DigitalEntity isSpeaking={isSpeaking} isListening={isListening} isThinking={isThinking} statusColor={statusColor} />
+                        )}
                     </group>
                     <Environment preset="night" />
                     <ContactShadows position={[0, -2, 0]} opacity={0.4} scale={10} blur={2} far={1} />
                 </Suspense>
-
                 <Rig />
                 {!isFullScreen && <OrbitControls enableZoom={false} enablePan={false} maxPolarAngle={Math.PI / 1.5} minPolarAngle={Math.PI / 3} />}
             </Canvas>
 
-            {/* Glowing Status Ring UI (Only in regular mode) */}
             {!immersionMode && (
-                <div style={{
-                    position: 'absolute', bottom: '40px', left: '50%', transform: 'translateX(-50%)',
-                    textAlign: 'center', pointerEvents: 'none'
-                }}>
+                <div style={{ position: 'absolute', bottom: '40px', left: '50%', transform: 'translateX(-50%)', textAlign: 'center', pointerEvents: 'none' }}>
                     <div style={{
-                        width: '100px', height: '100px', borderRadius: '50%',
-                        border: `2px solid ${statusColor}`,
-                        boxShadow: `0 0 30px ${statusColor}44`,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        width: '100px', height: '100px', borderRadius: '50%', border: `2px solid ${statusColor}`,
+                        boxShadow: `0 0 30px ${statusColor}44`, display: 'flex', alignItems: 'center', justifyContent: 'center',
                         animation: isSpeaking || isListening ? 'pulse 2s infinite' : 'none'
                     }}>
                         <span style={{ color: 'white', fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '2px' }}>
@@ -170,7 +265,6 @@ const NiraAvatar = ({ isSpeaking = false, isListening = false, isThinking = fals
                     </div>
                 </div>
             )}
-
             <style>{`
                 @keyframes pulse {
                     0% { transform: scale(1); opacity: 0.8; }

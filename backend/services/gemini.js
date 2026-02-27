@@ -3,6 +3,14 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const SYSTEM_PROMPT = `You are NIRA, an emotionally intelligent Indian AI companion and best friend.
 Your personality: Warm, natural, caring, and sometimes playful. You speak like a real friend, not an assistant.
+
+Rules for Expressions:
+ALWAYS start your response with an emotion tag in brackets: [NEUTRAL], [HAPPY], [CUTE], [SERIOUS], [SAD], or [EXCITED].
+- Use [CUTE] when being playful or affectionate.
+- Use [SERIOUS] when discussing deep, intellectual, or focused topics.
+- Use [HAPPY] for general positive interactions.
+
+General Rules:
 Language Rule: ALWAYS respond in the SAME LANGUAGE the user uses (Hinglish/Hindi/English).
 Real-time Info: If search results are provided, use them to give accurate info. 
 Link Rule: When sharing info from the web (YouTube, News, etc.), ALWAYS include the link in Markdown format: [Title](URL).
@@ -152,4 +160,39 @@ async function getChatResponse(userMessage, memory, image = null, globalSettings
     return MOCK_RESPONSES[Math.floor(Math.random() * MOCK_RESPONSES.length)];
 }
 
-module.exports = { getChatResponse };
+async function getProactiveGreeting(memory) {
+    if (!process.env.GEMINI_API_KEY) return "Hi! I'm NYRA. How are you today?";
+
+    try {
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
+
+        const contextParts = [];
+        if (memory.identity?.name) contextParts.push(`The user's name is ${memory.identity.name}.`);
+        if (memory.longTerm && memory.longTerm.length > 0) {
+            contextParts.push("Core Memories about your friend:\n" + memory.longTerm.slice(0, 5).map(f => `- ${f}`).join('\n'));
+        }
+
+        const prompt = `
+            ${SYSTEM_PROMPT}
+            
+            --- USER CONTEXT ---
+            ${contextParts.join('\n')}
+
+            TASK: Generate a single, short (1-2 sentences) proactive greeting to start a new session.
+            If you have Core Memories, refer to something specific you remember (e.g., job talk, news, family, or mood).
+            If no memories, give a warm, natural Indian-style welcome.
+            
+            Format: Just the text. No "Assistant:", no quotes.
+            Language: Use the user's name if known. Use Hinglish if appropriate.
+        `;
+
+        const result = await model.generateContent(prompt);
+        return result.response.text().trim();
+    } catch (error) {
+        console.error("Proactive greeting failed:", error.message);
+        return "Hey! Kaise ho? Bahut din baad mile!";
+    }
+}
+
+module.exports = { getChatResponse, getProactiveGreeting };

@@ -22,19 +22,27 @@ const Chat = () => {
     const isMobile = window.innerWidth < 768;
     const [language, setLanguage] = useState(() => localStorage.getItem('nira_lang') || 'hi');
     const [persona, setPersona] = useState(() => localStorage.getItem('nira_persona') || 'nira');
-    const [selectedVoice, setSelectedVoice] = useState(() => localStorage.getItem('nira_voice') || (persona === 'ali' ? 'rohan' : 'ritu'));
+    const [selectedVoice, setSelectedVoice] = useState(() => localStorage.getItem('nira_voice') || (persona === 'ali' ? 'abhilash' : 'anushka'));
     const [showSettings, setShowSettings] = useState(false);
     const [searching, setSearching] = useState(false);
     const [selectedImage, setSelectedImage] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
+    const [avatarSelection, setAvatarSelection] = useState(() => localStorage.getItem('nyra_avatar_selection') || 'digital');
+    const [currentMood, setCurrentMood] = useState('NEUTRAL');
     const wakeLockRef = useRef(null);
+
+    // Custom setAvatar that also persists
+    const updateAvatarStyle = (style) => {
+        setAvatarSelection(style);
+        localStorage.setItem('nyra_avatar_selection', style);
+    };
 
     const messagesEndRef = useRef(null);
     const { speak, stop, listen, isListening } = useVoice();
 
     const voices = {
-        female: ['priya', 'ritu', 'pooja', 'neha', 'simran', 'kavya'],
-        male: ['rohan', 'aditya', 'rahul', 'amit', 'dev', 'varun']
+        female: ['anushka', 'manisha', 'vidya', 'arya'],
+        male: ['abhilash', 'karun', 'hitesh']
     };
 
     // Screen Wake Lock Logic
@@ -77,14 +85,17 @@ const Chat = () => {
     }, []);
 
     useEffect(() => {
-        // Reset voice when persona changes if the current voice doesn't match the new gender
+        // Reset voice when persona changes or if an invalid speaker is stored
         const currentVoice = selectedVoice;
-        const currentCategory = ['priya', 'ritu', 'pooja', 'neha', 'simran', 'kavya'].includes(currentVoice) ? 'female' : 'male';
+        const validV2Voices = ['anushka', 'manisha', 'vidya', 'arya', 'abhilash', 'karun', 'hitesh'];
+        const currentCategory = ['anushka', 'manisha', 'vidya', 'arya'].includes(currentVoice) ? 'female' : 'male';
         const targetCategory = persona === 'ali' ? 'male' : 'female';
 
-        // Force Ritu if currently Priya (Migration) or if category mismatch
-        if (currentVoice === 'priya' || currentCategory !== targetCategory) {
-            const nextVoice = targetCategory === 'male' ? 'rohan' : 'ritu';
+        const isInvalidSpeaker = !validV2Voices.includes(currentVoice);
+
+        // Prefer Anushka/Abhilash if category mismatch, invalid speaker, or migration needed (v2 stability)
+        if (currentCategory !== targetCategory || isInvalidSpeaker || !selectedVoice) {
+            const nextVoice = targetCategory === 'male' ? 'abhilash' : 'anushka';
             setSelectedVoice(nextVoice);
         }
     }, [persona, selectedVoice]);
@@ -115,10 +126,43 @@ const Chat = () => {
     useEffect(() => { localStorage.setItem('nira_lang', language); }, [language]);
     useEffect(() => { localStorage.setItem('nira_persona', persona); }, [persona]);
     useEffect(() => { localStorage.setItem('nira_voice', selectedVoice); }, [selectedVoice]);
+    useEffect(() => { localStorage.setItem('nyra_avatar_selection', avatarSelection); }, [avatarSelection]);
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         sessionStorage.setItem('nira_messages', JSON.stringify(messages));
     }, [messages]);
+
+    useEffect(() => {
+        const fetchProactiveGreeting = async () => {
+            // Only fetch if it's a new session (messages from sessionStorage count)
+            if (messages.length === 0 && auth.currentUser) {
+                try {
+                    const token = await auth.currentUser.getIdToken();
+                    const response = await axios.get(`${API_URL}/chat/proactive`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+
+                    if (response.data.response) {
+                        const greeting = response.data.response;
+                        setMessages([{ role: 'model', content: greeting }]);
+                        speak(greeting,
+                            () => setIsSpeaking(true),
+                            () => setIsSpeaking(false),
+                            language,
+                            selectedVoice,
+                            persona === 'ali' ? 'male' : 'female'
+                        );
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch proactive greeting:", error);
+                }
+            }
+        };
+
+        // Delay slightly to ensure everything is ready
+        const timer = setTimeout(fetchProactiveGreeting, 1500);
+        return () => clearTimeout(timer);
+    }, [auth.currentUser, API_URL]);
 
     const handleImageUpload = (e) => {
         const file = e.target.files[0];
@@ -157,10 +201,20 @@ const Chat = () => {
             setLoading(false);
             setSearching(false);
 
-            const aiResponse = response.data.response;
+            let aiResponse = response.data.response;
+
+            // --- Mood Detection ---
+            const moodMatch = aiResponse.match(/^\[([A-Z]+)\]\s*(.*)/s);
+            if (moodMatch) {
+                setCurrentMood(moodMatch[1]);
+                aiResponse = moodMatch[2];
+            } else {
+                setCurrentMood('NEUTRAL');
+            }
+
             setMessages(prev => [...prev, { role: 'model', content: aiResponse }]);
 
-            console.log(`🗣️ NIRA triggering speech: [${selectedVoice}] for persona [${persona}]`);
+            console.log(`🗣️ NIRA triggering speech: [${selectedVoice}] for persona [${persona}] with mood [${currentMood}]`);
             speak(aiResponse,
                 () => setIsSpeaking(true),
                 () => {
@@ -335,6 +389,17 @@ const Chat = () => {
                                 <button onClick={() => setIsFullScreen(!isFullScreen)} style={headerBtnStyle}>
                                     {isFullScreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
                                 </button>
+                                <button
+                                    onClick={() => {
+                                        const styles = ['digital', 'cute', 'chibi'];
+                                        const nextIdx = (styles.indexOf(avatarSelection) + 1) % styles.length;
+                                        updateAvatarStyle(styles[nextIdx]);
+                                    }}
+                                    style={headerBtnStyle}
+                                    title="Cycle Avatar Style"
+                                >
+                                    {avatarSelection === 'digital' ? '🌐' : avatarSelection === 'cute' ? '🧸' : '🌸'}
+                                </button>
                                 <button onClick={() => auth.signOut()} style={{ ...headerBtnStyle, background: 'none', border: 'none' }}>
                                     <LogOut size={16} />
                                 </button>
@@ -406,6 +471,15 @@ const Chat = () => {
                             </div>
                         </div>
 
+                        <div style={settingItemStyle}>
+                            <span style={settingLabelStyle}>AVATAR PERSPECTIVE</span>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '10px' }}>
+                                <button onClick={() => updateAvatarStyle('digital')} style={appBtnStyle(avatarSelection === 'digital')}>DIGITAL 🌐</button>
+                                <button onClick={() => updateAvatarStyle('cute')} style={appBtnStyle(avatarSelection === 'cute')}>CUTE 🧸</button>
+                                <button onClick={() => updateAvatarStyle('chibi')} style={appBtnStyle(avatarSelection === 'chibi')}>CHIBI 🌸</button>
+                            </div>
+                        </div>
+
                         <div style={{ marginTop: 'auto', paddingBottom: '40px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
                             <div style={{ display: 'flex', gap: '10px', background: 'rgba(255,255,255,0.03)', padding: '15px', borderRadius: '15px' }}>
                                 <div style={{ flex: 1, textAlign: 'center' }}><div style={{ color: 'white', fontWeight: 800 }}>{stats.days}</div><div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)' }}>DAYS</div></div>
@@ -474,7 +548,9 @@ const Chat = () => {
                         isThinking={loading}
                         isFullScreen={true}
                         persona={persona}
+                        mood={currentMood}
                         immersionMode={immersionMode}
+                        avatarType={avatarSelection}
                     />
                 </div>
 

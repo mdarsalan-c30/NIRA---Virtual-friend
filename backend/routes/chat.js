@@ -165,4 +165,38 @@ async function updateEmotionalState(userId, userMsg, aiResponse) {
     }
 }
 
+router.get('/proactive', async (req, res) => {
+    const userId = req.user.uid;
+
+    try {
+        const profileRef = db.collection('users').doc(userId);
+        const [profileDoc, longTermSnapshot, stats] = await Promise.all([
+            profileRef.get(),
+            profileRef.collection('longTermMemory').orderBy('timestamp', 'desc').limit(10).get().catch(() => ({ docs: [] })),
+            memoryService.getFriendshipStats(userId)
+        ]);
+
+        const userData = profileDoc.exists ? profileDoc.data() : {};
+
+        // Don't greet if setup isn't complete
+        if (userData.setupStep === 'AWAITING_NAME' || !userData.name) {
+            return res.json({ response: "" });
+        }
+
+        const memory = {
+            identity: userData,
+            longTerm: longTermSnapshot.docs.map(doc => doc.data().summary).filter(Boolean),
+            stats
+        };
+
+        const { getProactiveGreeting } = require('../services/gemini');
+        const greeting = await getProactiveGreeting(memory);
+
+        res.json({ response: greeting });
+    } catch (error) {
+        console.error("Proactive route error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 module.exports = router;
