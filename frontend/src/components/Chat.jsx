@@ -41,7 +41,7 @@ const LinkPreview = ({ text }) => {
 
 const Chat = () => {
     const [messages, setMessages] = useState(() => {
-        const saved = sessionStorage.getItem('nira_messages');
+        const saved = sessionStorage.getItem('nyra_messages') || sessionStorage.getItem('nira_messages');
         return saved ? JSON.parse(saved) : [];
     });
     const [input, setInput] = useState('');
@@ -54,9 +54,9 @@ const Chat = () => {
     const [showChat, setShowChat] = useState(window.innerWidth > 1024); // Show by default on large screens
     const [stats, setStats] = useState({ days: 1, interactions: 0 });
     const isMobile = window.innerWidth < 768;
-    const [language, setLanguage] = useState(() => localStorage.getItem('nira_lang') || 'hi');
-    const [persona, setPersona] = useState(() => localStorage.getItem('nira_persona') || 'nyra');
-    const [selectedVoice, setSelectedVoice] = useState(() => localStorage.getItem('nira_voice') || (persona === 'ali' ? 'abhilash' : 'anushka'));
+    const [language, setLanguage] = useState(() => localStorage.getItem('nyra_lang') || localStorage.getItem('nira_lang') || 'hi');
+    const [persona, setPersona] = useState(() => localStorage.getItem('nyra_persona') || localStorage.getItem('nira_persona') || 'nyra');
+    const [selectedVoice, setSelectedVoice] = useState(() => localStorage.getItem('nyra_voice') || localStorage.getItem('nira_voice') || (persona === 'ali' ? 'abhilash' : 'anushka'));
     const [showSettings, setShowSettings] = useState(false);
     const [searching, setSearching] = useState(false);
     const [selectedImage, setSelectedImage] = useState(null);
@@ -160,14 +160,14 @@ const Chat = () => {
         if (auth.currentUser) fetchStats();
     }, [auth.currentUser, API_URL]);
 
-    useEffect(() => { localStorage.setItem('nira_lang', language); }, [language]);
-    useEffect(() => { localStorage.setItem('nira_persona', persona); }, [persona]);
-    useEffect(() => { localStorage.setItem('nira_voice', selectedVoice); }, [selectedVoice]);
     useEffect(() => { localStorage.setItem('nyra_avatar_selection', avatarSelection); }, [avatarSelection]);
     useEffect(() => {
+        sessionStorage.setItem('nyra_messages', JSON.stringify(messages));
+        localStorage.setItem('nyra_lang', language);
+        localStorage.setItem('nyra_persona', persona);
+        localStorage.setItem('nyra_voice', selectedVoice);
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-        sessionStorage.setItem('nira_messages', JSON.stringify(messages));
-    }, [messages]);
+    }, [messages, language, persona, selectedVoice]);
 
     useEffect(() => {
         const fetchProactiveGreeting = async () => {

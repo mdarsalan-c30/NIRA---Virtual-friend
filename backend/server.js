@@ -90,7 +90,7 @@ const db = admin.firestore();
 require('./services/telegram');
 
 app.get('/', (req, res) => {
-    res.send('NIRA Backend is running. ✅');
+    res.send('NYRA Backend is running. ✅');
 });
 
 // Auth Middleware

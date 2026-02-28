@@ -271,14 +271,16 @@ const NiraAvatar = ({ isSpeaking = false, isListening = false, isThinking = fals
                 {!isFullScreen && <OrbitControls enableZoom={false} enablePan={false} maxPolarAngle={Math.PI / 1.5} minPolarAngle={Math.PI / 3} />}
             </Canvas>
 
-            {!immersionMode && (
+            {!immersionMode && (!isMobile || !isListening) && (
                 <div style={{
                     position: 'absolute',
                     bottom: isMobile ? '130px' : '40px', // Higher on mobile to avoid mic overlap
                     left: '50%',
                     transform: 'translateX(-50%)',
                     textAlign: 'center',
-                    pointerEvents: 'none'
+                    pointerEvents: 'none',
+                    opacity: isMobile && isListening ? 0 : 1,
+                    transition: 'opacity 0.3s ease'
                 }}>
                     <div style={{
                         width: isMobile ? '80px' : '100px', // Slightly smaller on mobile
