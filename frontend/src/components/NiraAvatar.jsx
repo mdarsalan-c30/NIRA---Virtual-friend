@@ -272,9 +272,18 @@ const NiraAvatar = ({ isSpeaking = false, isListening = false, isThinking = fals
             </Canvas>
 
             {!immersionMode && (
-                <div style={{ position: 'absolute', bottom: '40px', left: '50%', transform: 'translateX(-50%)', textAlign: 'center', pointerEvents: 'none' }}>
+                <div style={{
+                    position: 'absolute',
+                    bottom: isMobile ? '130px' : '40px', // Higher on mobile to avoid mic overlap
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    textAlign: 'center',
+                    pointerEvents: 'none'
+                }}>
                     <div style={{
-                        width: '100px', height: '100px', borderRadius: '50%', border: `2px solid ${statusColor}`,
+                        width: isMobile ? '80px' : '100px', // Slightly smaller on mobile
+                        height: isMobile ? '80px' : '100px',
+                        borderRadius: '50%', border: `2px solid ${statusColor}`,
                         boxShadow: `0 0 30px ${statusColor}44`, display: 'flex', alignItems: 'center', justifyContent: 'center',
                         animation: isSpeaking || isListening ? 'pulse 2s infinite' : 'none'
                     }}>

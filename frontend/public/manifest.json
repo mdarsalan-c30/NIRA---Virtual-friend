@@ -1,0 +1,22 @@
+{
+    "name": "NYRA | AI Virtual Friend",
+    "short_name": "NYRA",
+    "description": "Your Personal AI Virtual Friend - Powered by Google Gemini",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0a081e",
+    "theme_color": "#6366f1",
+    "icons": [
+        {
+            "src": "/favicon.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/favicon.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}
