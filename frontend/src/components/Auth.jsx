@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { auth } from '../firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import logo from '../assets/logo.png';
 
 const Auth = ({ onAuthSuccess }) => {
     const [isLogin, setIsLogin] = useState(true);
@@ -26,6 +27,7 @@ const Auth = ({ onAuthSuccess }) => {
     return (
         <div className="auth-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
             <div className="glass-panel" style={{ padding: '40px', width: '100%', maxWidth: '400px', textAlign: 'center' }}>
+                <img src={logo} alt="NYRA Logo" style={{ height: '60px', width: 'auto', marginBottom: '20px', objectFit: 'contain' }} />
                 <h1 style={{ marginBottom: '24px', fontSize: '2rem', background: 'linear-gradient(to right, #8b5cf6, #22d3ee)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                     {isLogin ? 'Welcome Back' : 'Join NIRA'}
                 </h1>
@@ -57,6 +59,10 @@ const Auth = ({ onAuthSuccess }) => {
                 <p style={{ marginTop: '24px', color: 'var(--text-muted)', cursor: 'pointer' }} onClick={() => setIsLogin(!isLogin)}>
                     {isLogin ? "Don't have an account? Sign up" : "Already have an account? Login"}
                 </p>
+
+                <div style={{ marginTop: '32px', fontSize: '0.8rem', color: 'rgba(255,255,255,0.3)' }}>
+                    Developed with ❤️ by <a href="https://mdarsalan.vercel.app/" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Md Arsalan</a>
+                </div>
             </div>
         </div>
     );

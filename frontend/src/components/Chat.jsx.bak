@@ -6,39 +6,6 @@ import { Mic, Send, LogOut, Maximize2, Minimize2, Sparkles, MessageCircle } from
 import NiraAvatar from './NiraAvatar';
 import logo from '../assets/logo.png';
 
-const LinkPreview = ({ text }) => {
-    if (!text) return null;
-    const linkMatch = text.match(/\[(.*?)\]\((.*?)\)/);
-    if (!linkMatch) return null;
-
-    const [title, url] = [linkMatch[1], linkMatch[2]];
-    const isYoutube = url.includes('youtube.com') || url.includes('youtu.be');
-
-    return (
-        <div style={{
-            margin: '5px 0 15px', padding: '12px', borderRadius: '15px',
-            background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
-            maxWidth: '90%', alignSelf: 'flex-start', display: 'flex', gap: '12px'
-        }}>
-            <div style={{
-                width: '40px', height: '40px', borderRadius: '8px',
-                background: isYoutube ? '#ef4444' : '#6366f1',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-            }}>
-                <Sparkles size={18} color="white" />
-            </div>
-            <div style={{ overflow: 'hidden' }}>
-                <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {title}
-                </p>
-                <a href={url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.75rem', color: '#8b5cf6', textDecoration: 'none' }}>
-                    Open {isYoutube ? 'Video' : 'Link'} ➜
-                </a>
-            </div>
-        </div>
-    );
-};
-
 const Chat = () => {
     const [messages, setMessages] = useState(() => {
         const saved = sessionStorage.getItem('nira_messages');
@@ -61,10 +28,7 @@ const Chat = () => {
     const [searching, setSearching] = useState(false);
     const [selectedImage, setSelectedImage] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
-    const [avatarSelection, setAvatarSelection] = useState(() => {
-        const saved = localStorage.getItem('nyra_avatar_selection') || 'digital';
-        return saved === 'cute' ? 'digital' : saved;
-    });
+    const [avatarSelection, setAvatarSelection] = useState(() => localStorage.getItem('nyra_avatar_selection') || 'digital');
     const [currentMood, setCurrentMood] = useState('NEUTRAL');
     const wakeLockRef = useRef(null);
 
@@ -421,14 +385,14 @@ const Chat = () => {
                                 </button>
                                 <button
                                     onClick={() => {
-                                        const styles = ['digital', 'chibi'];
+                                        const styles = ['digital', 'cute', 'chibi'];
                                         const nextIdx = (styles.indexOf(avatarSelection) + 1) % styles.length;
                                         updateAvatarStyle(styles[nextIdx]);
                                     }}
                                     style={headerBtnStyle}
                                     title="Cycle Avatar Style"
                                 >
-                                    {avatarSelection === 'digital' ? '🌐' : '🌸'}
+                                    {avatarSelection === 'digital' ? '🌐' : avatarSelection === 'cute' ? '🧸' : '🌸'}
                                 </button>
                                 <button onClick={() => auth.signOut()} style={{ ...headerBtnStyle, background: 'none', border: 'none' }}>
                                     <LogOut size={16} />
@@ -505,6 +469,7 @@ const Chat = () => {
                             <span style={settingLabelStyle}>AVATAR PERSPECTIVE</span>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '10px' }}>
                                 <button onClick={() => updateAvatarStyle('digital')} style={appBtnStyle(avatarSelection === 'digital')}>DIGITAL 🌐</button>
+                                <button onClick={() => updateAvatarStyle('cute')} style={appBtnStyle(avatarSelection === 'cute')}>CUTE 🧸</button>
                                 <button onClick={() => updateAvatarStyle('chibi')} style={appBtnStyle(avatarSelection === 'chibi')}>CHIBI 🌸</button>
                             </div>
                         </div>
@@ -781,4 +746,87 @@ const Chat = () => {
     );
 };
 
+const headerBtnStyle = {
+    background: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    color: 'white',
+    borderRadius: '10px',
+    padding: '8px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.2s',
+};
+
+const actionBtnStyle = (active, color) => ({
+    width: '44px',
+    height: '44px',
+    borderRadius: '50%',
+    border: 'none',
+    background: active ? color : 'transparent',
+    color: 'white',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'all 0.3s',
+});
+
+const appBtnStyle = (active) => ({
+    padding: '16px',
+    borderRadius: '16px',
+    border: 'none',
+    background: active ? '#6366f1' : 'rgba(255,255,255,0.05)',
+    color: 'white',
+    fontWeight: 700,
+    fontSize: '0.85rem',
+    cursor: 'pointer',
+    transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+    textAlign: 'center'
+});
+
+const settingLabelStyle = {
+    fontSize: '0.7rem',
+    color: 'rgba(255,255,255,0.4)',
+    fontWeight: 800,
+    letterSpacing: '2px',
+    marginBottom: '10px',
+    display: 'block'
+};
+
 export default Chat;
+
+const LinkPreview = ({ text }) => {
+    if (!text) return null;
+    const linkMatch = text.match(/\[(.*?)\]\((.*?)\)/);
+    if (!linkMatch) return null;
+
+    const [title, url] = [linkMatch[1], linkMatch[2]];
+    const isYoutube = url.includes('youtube.com') || url.includes('youtu.be');
+
+    return (
+        <div style={{
+            margin: '5px 0 15px', padding: '12px', borderRadius: '15px',
+            background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
+            maxWidth: '90%', alignSelf: 'flex-start', display: 'flex', gap: '12px'
+        }}>
+            <div style={{
+                width: '40px', height: '40px', borderRadius: '8px',
+                background: isYoutube ? '#ef4444' : '#6366f1',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+            }}>
+                <Sparkles size={18} color="white" />
+            </div>
+            <div style={{ overflow: 'hidden' }}>
+                <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {title}
+                </p>
+                <a href={url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.75rem', color: '#8b5cf6', textDecoration: 'none' }}>
+                    Open {isYoutube ? 'Video' : 'Link'} ➜
+                </a>
+            </div>
+        </div>
+    );
+};
+

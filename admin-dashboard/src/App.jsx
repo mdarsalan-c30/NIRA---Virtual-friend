@@ -3,6 +3,7 @@ import { auth, db } from './firebase';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { collection, query, orderBy, limit, onSnapshot, getDocs, doc, getDoc, setDoc } from 'firebase/firestore';
 import { LayoutDashboard, Users, Activity, Settings, LogOut, ShieldAlert } from 'lucide-react';
+import logo from './assets/logo.png';
 
 const AdminDashboard = () => {
     const [user, setUser] = useState(null);
@@ -40,7 +41,10 @@ const AdminDashboard = () => {
         <div style={containerStyle}>
             {/* Sidebar */}
             <div style={sidebarStyle}>
-                <div style={logoStyle}>NYRA Admin</div>
+                <div style={{ ...logoStyle, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <img src={logo} alt="NYRA" style={{ height: '24px', width: 'auto' }} />
+                    <span>Admin</span>
+                </div>
                 <nav>
                     <NavItem icon={<LayoutDashboard size={20} />} label="Overview" active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} />
                     <NavItem icon={<Users size={20} />} label="Users" active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
@@ -159,7 +163,8 @@ const Login = () => {
     return (
         <div style={centerStyle}>
             <form onSubmit={handleLogin} style={loginCardStyle}>
-                <h2 style={{ margin: '0 0 20px' }}>NYRA Admin Login</h2>
+                <img src={logo} alt="NYRA Logo" style={{ height: '50px', width: 'auto', marginBottom: '20px' }} />
+                <h2 style={{ margin: '0 0 20px' }}>Admin Login</h2>
                 <input placeholder="Admin Email" style={inputStyle} value={email} onChange={e => setEmail(e.target.value)} />
                 <input type="password" placeholder="Passcode" style={inputStyle} value={password} onChange={e => setPassword(e.target.value)} />
                 <button type="submit" style={loginBtnStyle}>Enter Dashboard</button>
