@@ -238,6 +238,137 @@ const ChibiEntity = ({ isSpeaking, isListening, mood, statusColor }) => {
     );
 };
 
+// --- 3. Moe Anime Entity (Glasses, Bob, Turtleneck) ---
+const MoeEntity = ({ isSpeaking, isListening, mood, statusColor }) => {
+    const headRef = useRef();
+    const eyesRef = useRef();
+    const mouthRef = useRef();
+    const { mouse } = useThree();
+
+    useFrame((state) => {
+        const time = state.clock.getElapsedTime();
+        if (headRef.current) {
+            headRef.current.position.y = Math.sin(time * 1.2) * 0.015;
+            headRef.current.rotation.y = THREE.MathUtils.lerp(headRef.current.rotation.y, mouse.x * 0.25, 0.1);
+            headRef.current.rotation.x = THREE.MathUtils.lerp(headRef.current.rotation.x, -mouse.y * 0.15, 0.1);
+        }
+        if (eyesRef.current) {
+            const blink = (Math.sin(time * 0.35) > 0.98 || (time % 6 < 0.1)) ? 0.1 : 1.0;
+            eyesRef.current.scale.y = THREE.MathUtils.lerp(eyesRef.current.scale.y, blink, 0.2);
+        }
+        if (mouthRef.current) {
+            const scale = isSpeaking ? (0.4 + Math.abs(Math.sin(time * 18)) * 1.2) : 0.4;
+            mouthRef.current.scale.y = THREE.MathUtils.lerp(mouthRef.current.scale.y, scale, 0.3);
+        }
+    });
+
+    return (
+        <group>
+            {/* 1. Turtleneck Collar */}
+            <mesh position={[0, -0.9, 0]}>
+                <torusGeometry args={[0.3, 0.15, 16, 32]} rotation={[Math.PI / 2, 0, 0]} />
+                <meshStandardMaterial color="#3d2b2b" roughness={0.8} />
+            </mesh>
+            <mesh position={[0, -1.2, 0]}>
+                <cylinderGeometry args={[0.4, 0.5, 0.8, 32]} />
+                <meshStandardMaterial color="#3d2b2b" roughness={0.8} />
+            </mesh>
+
+            <mesh ref={headRef}>
+                {/* 2. Face Base */}
+                <mesh scale={[1.05, 1, 1.02]}>
+                    <sphereGeometry args={[1, 64, 64]} />
+                    <meshStandardMaterial color="#ffe4e1" roughness={0.4} />
+                </mesh>
+
+                {/* 3. Hair - Auburn Bob Style (Geometric) */}
+                <group position={[0, 0, -0.1]}>
+                    {/* Top/Back Hair */}
+                    <mesh position={[0, 0.1, -0.1]} scale={[1.1, 1.1, 1.1]}>
+                        <sphereGeometry args={[1, 32, 32, 0, Math.PI * 2, 0, Math.PI / 1.8]} />
+                        <meshStandardMaterial color="#8b4513" roughness={0.9} />
+                    </mesh>
+                    {/* Side Bobs */}
+                    <mesh position={[-1, -0.2, 0]} rotation={[0, 0, 0.1]}>
+                        <capsuleGeometry args={[0.2, 0.6, 4, 16]} />
+                        <meshStandardMaterial color="#8b4513" />
+                    </mesh>
+                    <mesh position={[1, -0.2, 0]} rotation={[0, 0, -0.1]}>
+                        <capsuleGeometry args={[0.2, 0.6, 4, 16]} />
+                        <meshStandardMaterial color="#8b4513" />
+                    </mesh>
+                    {/* Bangs */}
+                    <mesh position={[0, 0.7, 0.8]} rotation={[0.2, 0, 0]}>
+                        <boxGeometry args={[1.2, 0.4, 0.2]} />
+                        <meshStandardMaterial color="#8b4513" />
+                    </mesh>
+                </group>
+
+                {/* 4. Moe Eyes & Intricate Reflections */}
+                <group ref={eyesRef} position={[0, 0.1, 0.88]}>
+                    {[-0.38, 0.38].map((x, i) => (
+                        <group key={i} position={[x, 0, 0]}>
+                            {/* Eye Base (Amber/Brown) */}
+                            <mesh>
+                                <sphereGeometry args={[0.2, 32, 32]} />
+                                <meshStandardMaterial color="#d2691e" emissive="#ff8c00" emissiveIntensity={0.2} />
+                            </mesh>
+                            {/* Pupil */}
+                            <mesh position={[0, 0, 0.18]}>
+                                <sphereGeometry args={[0.07, 16, 16]} />
+                                <meshBasicMaterial color="#2b1a0e" />
+                            </mesh>
+                            {/* Intricate Reflections */}
+                            <mesh position={[0.08, 0.08, 0.2]} scale={[1, 1, 0.1]}>
+                                <sphereGeometry args={[0.06, 16, 16]} />
+                                <meshBasicMaterial color="white" transparent opacity={0.8} />
+                            </mesh>
+                            <mesh position={[-0.05, -0.05, 0.2]} scale={[1, 1, 0.1]}>
+                                <sphereGeometry args={[0.03, 16, 16]} />
+                                <meshBasicMaterial color="white" transparent opacity={0.4} />
+                            </mesh>
+                        </group>
+                    ))}
+                </group>
+
+                {/* 5. Round Oversized Glasses */}
+                <group position={[0, 0.1, 1.05]}>
+                    {[-0.38, 0.38].map((x, i) => (
+                        <mesh key={i} position={[x, 0, 0]} rotation={[0, 0, 0]}>
+                            <torusGeometry args={[0.28, 0.015, 16, 50]} />
+                            <meshStandardMaterial color="#2b2b2b" metalness={0.8} roughness={0.2} />
+                        </mesh>
+                    ))}
+                    {/* Bridge */}
+                    <mesh position={[0, 0, 0]}>
+                        <boxGeometry args={[0.2, 0.015, 0.01]} />
+                        <meshStandardMaterial color="#2b2b2b" />
+                    </mesh>
+                </group>
+
+                {/* 6. Freckles */}
+                <group position={[0, -0.05, 0.98]}>
+                    {[-0.15, -0.1, -0.05, 0.05, 0.1, 0.15].map((x, i) => (
+                        <mesh key={i} position={[x, Math.sin(x * 10) * 0.02, 0]} scale={0.01}>
+                            <sphereGeometry args={[0.5, 8, 8]} />
+                            <meshBasicMaterial color="#8b4513" transparent opacity={0.4} />
+                        </mesh>
+                    ))}
+                </group>
+
+                {/* 7. Simple Mouth */}
+                <mesh ref={mouthRef} position={[0, -0.35, 0.95]}>
+                    <capsuleGeometry args={[0.01, 0.08, 4, 16]} rotation={[0, 0, Math.PI / 2]} />
+                    <meshBasicMaterial color="#e9967a" />
+                </mesh>
+            </mesh>
+
+            {/* Warm Amber Lighting Override */}
+            <pointLight position={[0, 2, 2]} intensity={1.5} color="#ffb347" />
+        </group>
+    );
+};
+
 // --- Main Avatar Component ---
 const NiraAvatar = ({ isSpeaking = false, isListening = false, isThinking = false, isFullScreen = false, immersionMode = false, persona = 'nira', avatarType = 'digital', mood = 'NEUTRAL' }) => {
     const statusColor = isListening ? '#10b981' : isSpeaking ? '#8b5cf6' : '#6366f1';
@@ -258,7 +389,9 @@ const NiraAvatar = ({ isSpeaking = false, isListening = false, isThinking = fals
                 <pointLight position={[-2, 2, 2]} intensity={1} color={statusColor} />
                 <Suspense fallback={null}>
                     <group position={[0, isMobile ? 0.35 : -0.2, 0]} scale={isMobile ? 0.6 : 1.1}>
-                        {avatarType === 'chibi' ? (
+                        {avatarType === 'moe' ? (
+                            <MoeEntity isSpeaking={isSpeaking} isListening={isListening} mood={mood} statusColor={statusColor} />
+                        ) : avatarType === 'chibi' ? (
                             <ChibiEntity isSpeaking={isSpeaking} isListening={isListening} mood={mood} statusColor={statusColor} />
                         ) : (
                             <DigitalEntity isSpeaking={isSpeaking} isListening={isListening} isThinking={isThinking} statusColor={statusColor} />

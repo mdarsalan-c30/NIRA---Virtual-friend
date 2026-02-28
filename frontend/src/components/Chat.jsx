@@ -418,14 +418,14 @@ const Chat = () => {
                                 </button>
                                 <button
                                     onClick={() => {
-                                        const styles = ['digital', 'chibi'];
+                                        const styles = ['digital', 'chibi', 'moe'];
                                         const nextIdx = (styles.indexOf(avatarSelection) + 1) % styles.length;
                                         updateAvatarStyle(styles[nextIdx]);
                                     }}
                                     style={headerBtnStyle}
                                     title="Cycle Avatar Style"
                                 >
-                                    {avatarSelection === 'digital' ? '🌐' : '🌸'}
+                                    {avatarSelection === 'digital' ? '🌐' : avatarSelection === 'chibi' ? '🌸' : '🕶️'}
                                 </button>
                                 <button onClick={() => auth.signOut()} style={{ ...headerBtnStyle, background: 'none', border: 'none' }}>
                                     <LogOut size={16} />
@@ -503,6 +503,7 @@ const Chat = () => {
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '10px' }}>
                                 <button onClick={() => updateAvatarStyle('digital')} style={appBtnStyle(avatarSelection === 'digital')}>DIGITAL 🌐</button>
                                 <button onClick={() => updateAvatarStyle('chibi')} style={appBtnStyle(avatarSelection === 'chibi')}>CHIBI 🌸</button>
+                                <button onClick={() => updateAvatarStyle('moe')} style={appBtnStyle(avatarSelection === 'moe')}>MOE 🕶️</button>
                             </div>
                         </div>
 
