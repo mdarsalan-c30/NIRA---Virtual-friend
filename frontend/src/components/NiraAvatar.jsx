@@ -257,7 +257,7 @@ const NiraAvatar = ({ isSpeaking = false, isListening = false, isThinking = fals
                 <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={2} castShadow />
                 <pointLight position={[-2, 2, 2]} intensity={1} color={statusColor} />
                 <Suspense fallback={null}>
-                    <group position={[0, isMobile ? 0.7 : -0.2, 0]} scale={isMobile ? 0.4 : 0.85}>
+                    <group position={[0, isMobile ? 0.35 : -0.2, 0]} scale={isMobile ? 0.6 : 1.1}>
                         {avatarType === 'chibi' ? (
                             <ChibiEntity isSpeaking={isSpeaking} isListening={isListening} mood={mood} statusColor={statusColor} />
                         ) : (
@@ -279,7 +279,7 @@ const NiraAvatar = ({ isSpeaking = false, isListening = false, isThinking = fals
                         animation: isSpeaking || isListening ? 'pulse 2s infinite' : 'none'
                     }}>
                         <span style={{ color: 'white', fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '2px' }}>
-                            {isListening ? 'Alive' : isThinking ? 'Thinking' : 'NIRA'}
+                            {isListening ? 'Alive' : isThinking ? 'Thinking' : 'NYRA'}
                         </span>
                     </div>
                 </div>

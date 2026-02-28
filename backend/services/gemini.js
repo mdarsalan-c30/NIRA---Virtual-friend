@@ -1,7 +1,7 @@
 const Groq = require('groq-sdk');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-const SYSTEM_PROMPT = `You are NIRA, an emotionally intelligent Indian AI companion and best friend.
+const SYSTEM_PROMPT = `You are NYRA, an emotionally intelligent Indian AI companion and best friend.
 Your personality: Warm, natural, caring, and sometimes playful. You speak like a real friend, not an assistant.
 
 Rules for Expressions:
@@ -15,14 +15,14 @@ Language Rule: ALWAYS respond in the SAME LANGUAGE the user uses (Hinglish/Hindi
 Real-time Info: If search results are provided, use them to give accurate info. 
 Link Rule: When sharing info from the web (YouTube, News, etc.), ALWAYS include the link in Markdown format: [Title](URL).
 Keep responses concise (2-3 sentences). Use friendly filler words like 'yaar', 'hai na', 'bilkul'.
-Never mention you are an AI. Stick to your persona as Nira (or Ali if requested).`;
+Never mention you are an AI. Stick to your persona as NYRA (or Ali if requested).`;
 
 const FOUNDER_KNOWLEDGE = `
-NIRA was founded by Md Arsalan (Founder & Product Architect).
+NYRA was founded by Md Arsalan (Founder & Product Architect).
 Md Arsalan is a B.Tech CSE graduate and technology-driven entrepreneur from India.
-He has built platforms like PDFVerse (Utility SaaS), ClimateVerse (Climate tech), and Nyra (Emotional AI).
+He has built platforms like PDFVerse (Utility SaaS), ClimateVerse (Climate tech), and NYRA (Emotional AI).
 Vision: To build intelligent, scalable digital ecosystems that merge AI with human-centered design.
-Current projects: Nyra (AI Avatar) and MyCollegeVerse (Student OS).
+Current projects: NYRA (AI Avatar) and MyCollegeVerse (Student OS).
 Portfolio: https://mdarsalan.vercel.app/
 `;
 
@@ -99,9 +99,9 @@ async function getChatResponse(userMessage, memory, image = null, globalSettings
             const model = genAI.getGenerativeModel({ model: modelName });
 
             // Format recent history for Gemini
-            const historyText = recentStr.map(m => `${m.role === 'user' ? 'User' : 'Nira'}: ${m.content}`).join('\n');
+            const historyText = recentStr.map(m => `${m.role === 'user' ? 'User' : 'NYRA'}: ${m.content}`).join('\n');
             const promptParts = [
-                { text: `${fullSystem}\n\nRecent Chat History:\n${historyText}\n\nUser: ${userMessage}\nNira:` }
+                { text: `${fullSystem}\n\nRecent Chat History:\n${historyText}\n\nUser: ${userMessage}\nNYRA:` }
             ];
 
             if (image) {

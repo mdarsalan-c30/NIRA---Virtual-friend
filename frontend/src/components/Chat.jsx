@@ -55,7 +55,7 @@ const Chat = () => {
     const [stats, setStats] = useState({ days: 1, interactions: 0 });
     const isMobile = window.innerWidth < 768;
     const [language, setLanguage] = useState(() => localStorage.getItem('nira_lang') || 'hi');
-    const [persona, setPersona] = useState(() => localStorage.getItem('nira_persona') || 'nira');
+    const [persona, setPersona] = useState(() => localStorage.getItem('nira_persona') || 'nyra');
     const [selectedVoice, setSelectedVoice] = useState(() => localStorage.getItem('nira_voice') || (persona === 'ali' ? 'abhilash' : 'anushka'));
     const [showSettings, setShowSettings] = useState(false);
     const [searching, setSearching] = useState(false);
@@ -171,30 +171,27 @@ const Chat = () => {
 
     useEffect(() => {
         const fetchProactiveGreeting = async () => {
-            // Only fetch if it's a new session (messages from sessionStorage count)
-            if (messages.length === 0 && auth.currentUser) {
-                try {
-                    const token = await auth.currentUser.getIdToken();
-                    const response = await axios.get(`${API_URL}/chat/proactive`, {
-                        headers: { Authorization: `Bearer ${token}` }
-                    });
+            try {
+                const token = await auth.currentUser.getIdToken();
+                const response = await axios.get(`${API_URL}/chat/proactive`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
 
-                    if (response.data.response) {
-                        const greeting = response.data.response;
-                        setMessages([{ role: 'model', content: greeting }]);
-                        speak(greeting,
-                            () => setIsSpeaking(true),
-                            () => setIsSpeaking(false),
-                            language,
-                            selectedVoice,
-                            persona === 'ali' ? 'male' : 'female'
-                        );
-                    }
-                } catch (error) {
-                    console.error("Failed to fetch proactive greeting:", error);
+                if (response.data.response) {
+                    const greeting = response.data.response;
+                    setMessages([{ role: 'model', content: greeting }]);
+                    speak(greeting,
+                        () => setIsSpeaking(true),
+                        () => setIsSpeaking(false),
+                        language,
+                        selectedVoice,
+                        persona === 'ali' ? 'male' : 'female'
+                    );
                 }
+            } catch (error) {
+                console.error("Failed to fetch proactive greeting:", error);
             }
-        };
+        }
 
         // Delay slightly to ensure everything is ready
         const timer = setTimeout(fetchProactiveGreeting, 1500);
@@ -476,7 +473,7 @@ const Chat = () => {
                         <div style={settingItemStyle}>
                             <span style={settingLabelStyle}>PERSONALITY</span>
                             <div style={{ display: 'flex', gap: '10px' }}>
-                                <button onClick={() => setPersona('nira')} style={appBtnStyle(persona === 'nira')}>NIRA 👩</button>
+                                <button onClick={() => setPersona('nyra')} style={appBtnStyle(persona === 'nyra')}>NYRA 👩</button>
                                 <button onClick={() => setPersona('ali')} style={appBtnStyle(persona === 'ali')}>ALI 👨</button>
                             </div>
                         </div>
@@ -621,7 +618,7 @@ const Chat = () => {
                         {messages.length === 0 && (
                             <div style={{ margin: 'auto', textAlign: 'center', opacity: 0.3 }}>
                                 <Sparkles size={40} style={{ marginBottom: '10px' }} />
-                                <p>Conversation with {persona === 'nira' ? 'Nira' : 'Ali'}</p>
+                                <p>Conversation with {persona === 'nyra' ? 'NYRA' : 'Ali'}</p>
                             </div>
                         )}
                         {messages.map((msg, i) => (

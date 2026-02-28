@@ -19,7 +19,7 @@ function App() {
   if (loading) {
     return (
       <div style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#0a0a0c', color: 'white' }}>
-        <p>Initializing NIRA...</p>
+        <p>Initializing NYRA...</p>
       </div>
     );
   }

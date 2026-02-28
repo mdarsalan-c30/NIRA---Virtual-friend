@@ -29,7 +29,7 @@ const Auth = ({ onAuthSuccess }) => {
             <div className="glass-panel" style={{ padding: '40px', width: '100%', maxWidth: '400px', textAlign: 'center' }}>
                 <img src={logo} alt="NYRA Logo" style={{ height: '60px', width: 'auto', marginBottom: '20px', objectFit: 'contain' }} />
                 <h1 style={{ marginBottom: '24px', fontSize: '2rem', background: 'linear-gradient(to right, #8b5cf6, #22d3ee)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                    {isLogin ? 'Welcome Back' : 'Join NIRA'}
+                    {isLogin ? 'Welcome Back' : 'Join NYRA'}
                 </h1>
 
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
