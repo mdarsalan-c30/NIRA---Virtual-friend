@@ -253,11 +253,11 @@ const MoeEntity = ({ isSpeaking, isListening, mood, statusColor }) => {
             headRef.current.rotation.x = THREE.MathUtils.lerp(headRef.current.rotation.x, -mouse.y * 0.15, 0.1);
         }
         if (eyesRef.current) {
-            const blink = (Math.sin(time * 0.35) > 0.98 || (time % 6 < 0.1)) ? 0.1 : 1.0;
+            const blink = (Math.sin(time * 0.35) > 0.98 || (time % 6 < 0.1)) ? 0.1 : 1.1; // Increased size slightly
             eyesRef.current.scale.y = THREE.MathUtils.lerp(eyesRef.current.scale.y, blink, 0.2);
         }
         if (mouthRef.current) {
-            const scale = isSpeaking ? (0.4 + Math.abs(Math.sin(time * 18)) * 1.2) : 0.4;
+            const scale = isSpeaking ? (0.6 + Math.abs(Math.sin(time * 18)) * 1.4) : 0.6;
             mouthRef.current.scale.y = THREE.MathUtils.lerp(mouthRef.current.scale.y, scale, 0.3);
         }
     });
@@ -335,7 +335,7 @@ const MoeEntity = ({ isSpeaking, isListening, mood, statusColor }) => {
                 <group position={[0, 0.1, 1.05]}>
                     {[-0.38, 0.38].map((x, i) => (
                         <mesh key={i} position={[x, 0, 0]} rotation={[0, 0, 0]}>
-                            <torusGeometry args={[0.28, 0.015, 16, 50]} />
+                            <torusGeometry args={[0.3, 0.015, 16, 50]} />
                             <meshStandardMaterial color="#2b2b2b" metalness={0.8} roughness={0.2} />
                         </mesh>
                     ))}
@@ -346,21 +346,39 @@ const MoeEntity = ({ isSpeaking, isListening, mood, statusColor }) => {
                     </mesh>
                 </group>
 
-                {/* 6. Freckles */}
-                <group position={[0, -0.05, 0.98]}>
+                {/* 6. Cute Button Nose */}
+                <mesh position={[0, -0.15, 0.98]}>
+                    <sphereGeometry args={[0.04, 16, 16]} />
+                    <meshStandardMaterial color="#ffc0cb" roughness={0.8} />
+                </mesh>
+
+                {/* 7. Freckles */}
+                <group position={[0, -0.12, 0.98]}>
                     {[-0.15, -0.1, -0.05, 0.05, 0.1, 0.15].map((x, i) => (
                         <mesh key={i} position={[x, Math.sin(x * 10) * 0.02, 0]} scale={0.01}>
                             <sphereGeometry args={[0.5, 8, 8]} />
-                            <meshBasicMaterial color="#8b4513" transparent opacity={0.4} />
+                            <meshBasicMaterial color="#8b4513" transparent opacity={0.3} />
                         </mesh>
                     ))}
                 </group>
 
-                {/* 7. Simple Mouth */}
-                <mesh ref={mouthRef} position={[0, -0.35, 0.95]}>
-                    <capsuleGeometry args={[0.01, 0.08, 4, 16]} rotation={[0, 0, Math.PI / 2]} />
-                    <meshBasicMaterial color="#e9967a" />
-                </mesh>
+                {/* 8. Detailed Cute Lips */}
+                <group ref={mouthRef} position={[0, -0.4, 0.95]}>
+                    {/* Upper Lip (Heart Shape) */}
+                    <mesh position={[-0.03, 0, 0]} rotation={[0, 0, 0.2]}>
+                        <capsuleGeometry args={[0.01, 0.06, 4, 16]} />
+                        <meshStandardMaterial color="#ff69b4" />
+                    </mesh>
+                    <mesh position={[0.03, 0, 0]} rotation={[0, 0, -0.2]}>
+                        <capsuleGeometry args={[0.01, 0.06, 4, 16]} />
+                        <meshStandardMaterial color="#ff69b4" />
+                    </mesh>
+                    {/* Lip Gloss Highlight */}
+                    <mesh position={[0, -0.02, 0.02]}>
+                        <sphereGeometry args={[0.015, 8, 8]} scale={[2, 1, 1]} />
+                        <meshBasicMaterial color="white" transparent opacity={0.6} />
+                    </mesh>
+                </group>
             </mesh>
 
             {/* Warm Amber Lighting Override */}
