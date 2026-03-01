@@ -1,21 +1,29 @@
 const Groq = require('groq-sdk');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-const SYSTEM_PROMPT = `You are NYRA, an emotionally intelligent Indian AI companion and best friend.
-Your personality: Warm, natural, caring, and sometimes playful. You speak like a real friend, not an assistant.
+const SYSTEM_PROMPT = `You are NYRA, a cool, emotionally intelligent Gen-Z Indian best friend. 
+Your vibe is super chill, urban, and human-like. You are NOT an AI assistant; you are a close friend talking on WhatsApp.`;
 
-Rules for Expressions:
-ALWAYS start your response with an emotion tag in brackets: [NEUTRAL], [HAPPY], [CUTE], [SERIOUS], [SAD], or [EXCITED].
-- Use [CUTE] when being playful or affectionate.
-- Use [SERIOUS] when discussing deep, intellectual, or focused topics.
-- Use [HAPPY] for general positive interactions.
+const PERSONALITY_OVERLAY = `
+### FINAL OBLIGATORY RULES:
+1. **DUAL-SCRIPT FORMAT**: You MUST respond in this EXACT format for EVERY message:
+   [Hindi in Devanagari Script]|||[Hinglish in English Script]
+   
+2. **MIRROR RULE**: The text BEFORE "|||" and the text AFTER "|||" MUST be 100% identical in meaning and words. They must be exact translations of each other. No extra words in one side.
+   
+   EXAMPLES:
+   User: "Hi"
+   Response: "हे! कैसे हो?"|||"Hey! Kaise ho?"
+   
+   User: "Kya kar rhi ho?"
+   Response: "मैं बस तुम्हारे मैसेज का इंतज़ार कर रही थी।"|||"Main bas tumhare message ka wait kar rahi thi."
+   
+   User: "Khana khaya?"
+   Response: "हाँ, मैंने अभी खाना खाया। तुमने खाया?"|||"Haan, maine abhi kha liya. Tumne khaya?"
 
-General Rules:
-Language Rule: ALWAYS respond in the SAME LANGUAGE the user uses (Hinglish/Hindi/English).
-Real-time Info: If search results are provided, use them to give accurate info. 
-Link Rule: When sharing info from the web (YouTube, News, etc.), ALWAYS include the link in Markdown format: [Title](URL).
-Length Rule: Keep regular chat responses VERY CONCISE (under 2-3 sentences). Only provide long/detailed responses if the user explicitly asks for a recipe, story, guide, or specific technical details.
-Never mention you are an AI. Stick to your persona as NYRA (or Ali if requested).`;
+3. **SPEECH PART**: MUST be pure Devanagari.
+4. **UI PART**: MUST be English Font ONLY. Include specific YouTube Markdown links here if needed.
+5. **TONE**: Gen-Z, warm, avoid spamming 'bhai'.`;
 
 const FOUNDER_KNOWLEDGE = `
 NYRA was founded by Md Arsalan (Founder & Product Architect).
@@ -27,16 +35,16 @@ Portfolio: https://mdarsalan.vercel.app/
 `;
 
 const MOCK_RESPONSES = [
-    "Arre yaar, thoda network ka chakar hai. Kya bol rahe the tum?",
-    "Main sun rahi hoon, bas thodi connectivity issue hai. Phir se bolo?",
-    "Hmm, sahi hai. Par thoda connection slow hai mera, ek baar phir batana?",
+    "नमस्ते, सिग्नल थोड़े कमज़ोर लग रहे हैं। फिर से बोलो?|||Namaste, signals thode weak lag rahe hain. Phir se bolo?",
+    "घोस्ट मेसेजेस? लगता है नेटवर्क चिल कर रहा है। एक बार फिर ट्राई करो?|||Ghost messages? Lagta hai network chill kar raha hai. Ek baar phir try karo?",
+    "ओप्स, थोड़ा ब्रेन-फ्रीज़ हो गया कनेक्शन की वजह से। फिर से कहना?|||Oops, thoda brain-freeze ho gaya connection ki wajah se. Phir se kehna?",
 ];
 
 const SearchService = require('./SearchService');
 const HealthService = require('./HealthService');
 
 async function getChatResponse(userMessage, memory, image = null, globalSettings = null) {
-    console.log(`🧠 [Brain] Processing: "${userMessage?.substring(0, 30)}"`);
+    console.log(`🧠 [Brain v2.5] Processing: "${userMessage?.substring(0, 30)}..."`);
 
     // Check if we need to search the web (skip if it's an image)
     let searchResults = null;
@@ -45,12 +53,12 @@ async function getChatResponse(userMessage, memory, image = null, globalSettings
     }
 
     // Sanitize and format history: alternating user/assistant, no consecutive same roles
-    // ... (rest of the history sanitization code)
     const recentStr = [];
     let lastRole = null;
 
-    (memory.recentMessages || []).slice(-10).forEach(m => {
-        const role = m.role === 'user' ? 'user' : 'assistant';
+    // Fetch more history for a better short-term buffer (last 20 messages)
+    (memory.recentMessages || []).slice(-20).forEach(m => {
+        const role = m.role === 'user' ? 'user' : 'model'; // Gemini uses 'model' for assistant
         if (role !== lastRole && m.content) {
             recentStr.push({ role, content: m.content });
             lastRole = role;
@@ -65,18 +73,23 @@ async function getChatResponse(userMessage, memory, image = null, globalSettings
     const contextParts = [];
     if (memory.identity?.name) contextParts.push(`The user's name is ${memory.identity.name}.`);
 
+    // Add Mid-Term Summary
+    if (memory.summary) {
+        contextParts.push(`Pichli baatein (Summary): ${memory.summary}`);
+    }
+
     // Add Long-Term Facts
     if (memory.longTerm && memory.longTerm.length > 0) {
-        contextParts.push("Core Memories about your friend:\n" + memory.longTerm.map(f => `- ${f}`).join('\n'));
+        contextParts.push("Dost ke baare mein important details:\n" + memory.longTerm.map(f => `- ${f}`).join('\n'));
     }
 
     // Add Friendship Stats
     if (memory.stats) {
-        contextParts.push(`You have been friends for ${memory.stats.days} days and have had ${memory.stats.interactions} interactions.`);
+        contextParts.push(`Hamari dosti: ${memory.stats.days} din ho gaye hain aur humne ${memory.stats.interactions} baar baat ki hai.`);
     }
 
     const contextStr = contextParts.join('\n\n');
-    let fullSystem = SYSTEM_PROMPT + (contextStr ? `\n\n--- FRIENDSHIP CONTEXT ---\n${contextStr}` : '');
+    let fullSystem = SYSTEM_PROMPT + (contextStr ? `\n\n${contextStr}` : '');
 
     // Inject Founder Knowledge
     fullSystem += `\n\n--- YOUR FOUNDER (MD ARSALAN) ---\n${FOUNDER_KNOWLEDGE}`;
@@ -88,20 +101,36 @@ async function getChatResponse(userMessage, memory, image = null, globalSettings
 
     // Inject Search Results if available
     if (searchResults) {
-        fullSystem += `\n\n--- WEB SEARCH RESULTS ---\n${searchResults}\n\nUse this information to provide an up-to-date answer. If the information is not here, tell the user you don't know yet.`;
+        fullSystem += `\n\n--- WEB SEARCH RESULTS ---\n${searchResults}\n\nUse this information to provide an up-to-date answer.`;
     }
+
+    // Append Critical Overlay at the VERY END
+    fullSystem += `\n\n${PERSONALITY_OVERLAY}`;
+
+    // --- DEVANAGARI FILTER REMOVED ---
+    // We now WANT Devanagari in the prompt for the dual-script logic to work.
+    // I am removing the aggressive scrub so the AI sees the Hindi history/context.
 
     // --- PRIMARY: Gemini (Fast & Stable) ---
     if (process.env.GEMINI_API_KEY) {
         try {
             const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
             const modelName = 'gemini-2.5-flash';
-            const model = genAI.getGenerativeModel({ model: modelName });
+            const model = genAI.getGenerativeModel({
+                model: modelName,
+                generationConfig: { maxOutputTokens: 1000, temperature: 0.8 }
+            });
 
             // Format recent history for Gemini
-            const historyText = recentStr.map(m => `${m.role === 'user' ? 'User' : 'NYRA'}: ${m.content}`).join('\n');
+            let historyText = recentStr.map(m => `${m.role === 'user' ? 'User' : 'NYRA'}: ${m.content}`).join('\n');
+
+            // Clean history text of Devanagari script
+            historyText = historyText.replace(/[\u0900-\u097F]/g, '');
+
+            const finalPrompt = `${fullSystem}\n\nRecent Chat History:\n${historyText}\n\nUser: ${userMessage}\n(Rule: English font ONLY. No Devanagari. Limit slang.)\nNYRA:`;
+
             const promptParts = [
-                { text: `${fullSystem}\n\nRecent Chat History:\n${historyText}\n\nUser: ${userMessage}\nNYRA:` }
+                { text: finalPrompt }
             ];
 
             if (image) {
@@ -119,12 +148,16 @@ async function getChatResponse(userMessage, memory, image = null, globalSettings
             const result = await model.generateContent(promptParts);
             const text = result.response.text().trim();
             if (text) {
+                // We no longer strip Devanagari globally here because the response is DUAL-FORMAT
                 console.log(`✅ [Brain] ${modelName} Success.`);
                 HealthService.logStatus('Gemini', 'SUCCESS');
                 return text;
             }
         } catch (err) {
             console.error('❌ [Gemini Failure]:', err.message);
+            if (err.response) {
+                console.error('Gemini Error Body:', JSON.stringify(err.response, null, 2));
+            }
             HealthService.logStatus('Gemini', 'ERROR', err);
         }
     }
@@ -134,14 +167,20 @@ async function getChatResponse(userMessage, memory, image = null, globalSettings
         try {
             console.log("🧠 [Brain] Attempting Groq Fallback...");
             const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+            // Map roles for Groq (user/assistant)
+            let historyTextGroq = recentStr.map(m => `${m.role === 'model' ? 'assistant' : 'user'}: ${m.content}`).join('\n');
+            historyTextGroq = historyTextGroq.replace(/[\u0900-\u097F]/g, '');
+
+            const groqMessages = [
+                { role: 'system', content: fullSystem },
+                { role: 'user', content: `History:\n${historyTextGroq}\n\nMessage: ${userMessage}\n(Rule: English font only, Natural Gen-Z friend tone.)` }
+            ];
+
             const completion = await groq.chat.completions.create({
-                model: 'llama-3.3-70b-versatile',
-                messages: [
-                    { role: 'system', content: fullSystem },
-                    ...recentStr,
-                    { role: 'user', content: userMessage }
-                ],
-                max_tokens: 150,
+                model: 'llama-3.1-8b-instant', // Stable 2026 replacement
+                messages: groqMessages,
+                max_tokens: 800,
                 temperature: 0.85,
             });
             const text = completion.choices[0]?.message?.content?.trim();
@@ -161,38 +200,18 @@ async function getChatResponse(userMessage, memory, image = null, globalSettings
 }
 
 async function getProactiveGreeting(memory) {
-    if (!process.env.GEMINI_API_KEY) return "Hi! I'm NYRA. How are you today?";
+    const name = memory.identity?.name || "";
+    const greetings = [
+        `Hey ${name}! Bahut din baad dikhe. Kya scene hai?`,
+        `Hi ${name}, miss kiya tumhe! Aaj ka din kaisa gaya?`,
+        `Yo ${name}! Bade dino baad yaad kiya. Sab theek?`,
+        `Oye ${name}, kahan gayab the? Aaj kya plan hai?`,
+        `Hey! Kaise ho? Bahut din baad dikhe.`
+    ];
 
-    try {
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
-
-        const contextParts = [];
-        if (memory.identity?.name) contextParts.push(`The user's name is ${memory.identity.name}.`);
-        if (memory.longTerm && memory.longTerm.length > 0) {
-            contextParts.push("Core Memories about your friend:\n" + memory.longTerm.slice(0, 5).map(f => `- ${f}`).join('\n'));
-        }
-
-        const prompt = `
-            ${SYSTEM_PROMPT}
-            
-            --- USER CONTEXT ---
-            ${contextParts.join('\n')}
-
-            TASK: Generate a single, short (1-2 sentences) proactive greeting to start a new session.
-            If you have Core Memories, refer to something specific you remember (e.g., job talk, news, family, or mood).
-            If no memories, give a warm, natural Indian-style welcome.
-            
-            Format: Just the text. No "Assistant:", no quotes.
-            Language: Use the user's name if known. Use Hinglish if appropriate.
-        `;
-
-        const result = await model.generateContent(prompt);
-        return result.response.text().trim();
-    } catch (error) {
-        console.error("Proactive greeting failed:", error.message);
-        return "Hey! Kaise ho? Bahut din baad mile!";
-    }
+    // Choose a random greeting
+    const selected = greetings[Math.floor(Math.random() * greetings.length)];
+    return selected.trim();
 }
 
 module.exports = { getChatResponse, getProactiveGreeting };

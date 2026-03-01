@@ -23,8 +23,8 @@ router.post('/', async (req, res) => {
             db.collection('system').doc('settings').get(),
             profileRef.get(),
             profileRef.collection('emotionalState').doc('current').get(),
-            profileRef.collection('longTermMemory').orderBy('timestamp', 'desc').limit(10).get().catch(() => ({ docs: [] })),
-            profileRef.collection('conversations').orderBy('timestamp', 'desc').limit(15).get().catch(() => ({ docs: [] })),
+            profileRef.collection('longTermMemory').orderBy('timestamp', 'desc').limit(30).get().catch(() => ({ docs: [] })),
+            profileRef.collection('conversations').orderBy('timestamp', 'desc').limit(20).get().catch(() => ({ docs: [] })),
             memoryService.getFriendshipStats(userId)
         ]);
 
@@ -32,6 +32,7 @@ router.post('/', async (req, res) => {
         const userData = profileDoc.exists ? profileDoc.data() : {};
         const isPro = userData.isPro || false;
         const usedMinutes = userData.usageMinutes || 0;
+        const memorySummary = userData.memorySummary || "";
 
         // Check if limit exceeded (only for trial users)
         if (!isPro && usedMinutes >= globalSettings.trialLimitMinutes) {
@@ -73,12 +74,13 @@ router.post('/', async (req, res) => {
         const memory = {
             identity: userData,
             emotionalState: emotionalDoc.exists ? emotionalDoc.data() : {},
+            summary: memorySummary,
             longTerm: longTermSnapshot.docs.map(doc => doc.data().summary).filter(Boolean),
             recentMessages: conversationsSnapshot.docs.map(doc => doc.data()).reverse(),
             stats
         };
 
-        console.log(`Fetched memory for ${userId}. Used: ${usedMinutes.toFixed(1)} mins. Limit: ${globalSettings.trialLimitMinutes} mins.`);
+        console.log(`Fetched memory for ${userId}. Used: ${usedMinutes.toFixed(1)} mins. Summary: ${memorySummary.length > 0 ? "YES" : "NO"}`);
 
         // 2. Get Gemini response
         const aiResponse = await getChatResponse(message, memory, image, globalSettings);
@@ -89,7 +91,8 @@ router.post('/', async (req, res) => {
 
         // Calculate usage time (delta since last message)
         let timeIncrement = 0;
-        const lastMsg = memory.recentMessages[memory.recentMessages.length - 1];
+        const recentMessages = memory.recentMessages;
+        const lastMsg = recentMessages[recentMessages.length - 1];
         if (lastMsg && lastMsg.timestamp) {
             const lastTime = lastMsg.timestamp.toDate ? lastMsg.timestamp.toDate().getTime() : new Date(lastMsg.timestamp).getTime();
             const nowTime = Date.now();
@@ -137,12 +140,19 @@ router.post('/', async (req, res) => {
         // 4. Return response
         res.json({ response: aiResponse });
 
-        // 5. Fire-and-forget: update emotional state & extract facts
+        // 5. Fire-and-forget: update emotional state, extract facts & summarize
         updateEmotionalState(userId, message, aiResponse);
 
-        // Only extract facts every few messages or if the message is long/significant
-        if (memory.recentMessages.length % 5 === 0 || message.length > 40) {
-            memoryService.extractFacts(userId, [...memory.recentMessages, { role: 'user', content: message }, { role: 'model', content: aiResponse }]);
+        const fullConversationForProcessing = [...memory.recentMessages, { role: 'user', content: message }, { role: 'model', content: aiResponse }];
+
+        // Periodic Summarization (Every 15 messages)
+        if (fullConversationForProcessing.length >= 15 && (userData.totalInteractions || 0) % 15 === 0) {
+            memoryService.summarizeHistory(userId, fullConversationForProcessing, memorySummary);
+        }
+
+        // Periodic Fact Extraction
+        if (message.length > 40 || (userData.totalInteractions || 0) % 5 === 0) {
+            memoryService.extractFacts(userId, fullConversationForProcessing);
         }
 
     } catch (error) {

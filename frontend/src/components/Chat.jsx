@@ -235,21 +235,30 @@ const Chat = () => {
             setLoading(false);
             setSearching(false);
 
-            let aiResponse = response.data.response;
-
-            // --- Mood Detection ---
-            const moodMatch = aiResponse.match(/^\[([A-Z]+)\]\s*(.*)/s);
-            if (moodMatch) {
-                setCurrentMood(moodMatch[1]);
-                aiResponse = moodMatch[2];
-            } else {
-                setCurrentMood('NEUTRAL');
+            let aiResponse = "";
+            try {
+                aiResponse = response?.data?.response || "";
+            } catch (e) {
+                console.error("Failed to parse response:", e);
             }
 
-            setMessages(prev => [...prev, { role: 'model', content: aiResponse }]);
+            let displayResponse = aiResponse;
+            let speechResponse = aiResponse;
 
-            console.log(`🗣️ NIRA triggering speech: [${selectedVoice}] for persona [${persona}] with mood [${currentMood}]`);
-            speak(aiResponse,
+            if (aiResponse && aiResponse.includes('|||')) {
+                const parts = aiResponse.split('|||');
+                speechResponse = parts[0].trim().replace(/^"|"$/g, ''); // Speech (Hindi)
+                displayResponse = parts[1].trim().replace(/^"|"$/g, ''); // UI (English Font)
+                console.log("🗣️ Speech Part (Devanagari):", speechResponse);
+                console.log("📱 UI Part (English):", displayResponse);
+            } else {
+                console.warn("⚠️ AI did not follow ||| format. Using raw response.");
+            }
+
+            setMessages(prev => [...prev, { role: 'model', content: displayResponse }]);
+
+            console.log(`🗣️ NIRA triggering speech: [${selectedVoice}] for persona [${persona}]`);
+            speak(speechResponse,
                 () => setIsSpeaking(true),
                 () => {
                     setIsSpeaking(false);
@@ -258,7 +267,7 @@ const Chat = () => {
                         setTimeout(() => listen(handleSend, language), 800);
                     }
                 },
-                language,
+                'hi', // Always use Hindi accent for speechResponse (Devanagari)
                 selectedVoice,
                 persona === 'ali' ? 'male' : 'female'
             );
