@@ -46,9 +46,9 @@ class VisionService {
                 
                 RULES:
                 1. Be EXTREMELY SPECIFIC. (Mention colors, specific objects, lighting, facial expressions, or text you see).
-                2. Describe it in warm but clear Hinglish (Mix 70% Hindi, 30% English).
+                2. Describe it in warm but clear Hinglish (English alphabet ONLY).
                 3. Keep it to 2-3 sentences max.
-                4. NO GENERIC PHRASES like "ye sundar hai" unless you've mentioned specifics first.
+                4. CRITICAL: NEVER use Devanagari/Hindi script. Write "sundar" not "सुंदर".
                 
                 Example: "Yaar, ye dark room mein ek blue color ki bottle table par hai, aur lights thodi dim lag rahi hain."
                 Talk in the present tense as if seeing it right now.

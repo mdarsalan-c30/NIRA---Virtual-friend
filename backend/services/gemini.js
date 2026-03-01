@@ -122,12 +122,9 @@ async function getChatResponse(userMessage, memory, image = null, globalSettings
             });
 
             // Format recent history for Gemini
-            let historyText = recentStr.map(m => `${m.role === 'user' ? 'User' : 'NYRA'}: ${m.content}`).join('\n');
+            const historyText = recentStr.map(m => `${m.role === 'user' ? 'User' : 'NYRA'}: ${m.content}`).join('\n');
 
-            // Clean history text of Devanagari script
-            historyText = historyText.replace(/[\u0900-\u097F]/g, '');
-
-            const finalPrompt = `${fullSystem}\n\nRecent Chat History:\n${historyText}\n\nUser: ${userMessage}\n(Rule: English font ONLY. No Devanagari. Limit slang.)\nNYRA:`;
+            const finalPrompt = `${fullSystem}\n\nRecent Chat History:\n${historyText}\n\nUser: ${userMessage}\nNYRA:`;
 
             const promptParts = [
                 { text: finalPrompt }
