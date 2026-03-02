@@ -1,122 +1,39 @@
 const dotenv = require('dotenv');
 const path = require('path');
 
-// Load environment variables immediately at the start
-dotenv.config(); // Loads from .env in the current working directory
-dotenv.config({ path: path.join(__dirname, '../.env') }); // Fallback to root .env if it exists
+// Initialize environment
+dotenv.config();
 
-console.log("🎬 [NYRA] System Booting Up...");
-console.log(`ℹ️ Node Version: ${process.version}`);
-console.log(`ℹ️ Environment: ${process.env.NODE_ENV || 'development'}`);
-
-// Global error handling for production stability
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('⚠️ Unhandled Rejection at:', promise, 'reason:', reason);
-});
-process.on('uncaughtException', (err) => {
-    console.error('❌ Uncaught Exception:', err);
-});
-
-
+console.log("🎬 [NYRA] SYSTEM STARTING...");
 
 const express = require('express');
 const cors = require('cors');
-const admin = require('firebase-admin');
+const admin = require('./services/firebase');
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-const PORT = process.env.PORT || 5000;
-
-// Start listening IMMEDIATELY to pass Render's health check
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 NYRA Backend is now Listening on Port ${PORT} (Binding: 0.0.0.0)`);
-});
-
-// Initialize Firebase Admin
-let serviceAccount;
-try {
-    // Try environment variables first (Production/Render)
-    if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY) {
-        // Clean up private key: handle escaped newlines, remove unwanted quotes, stray backslashes, and trim
-        let privateKey = process.env.FIREBASE_PRIVATE_KEY.trim();
-
-        // Remove leading/trailing quotes if they exist
-        if (privateKey.startsWith('"')) privateKey = privateKey.substring(1);
-        if (privateKey.endsWith('"')) privateKey = privateKey.substring(0, privateKey.length - 1);
-        if (privateKey.startsWith("'")) privateKey = privateKey.substring(1);
-        if (privateKey.endsWith("'")) privateKey = privateKey.substring(0, privateKey.length - 1);
-
-        // Handle common formatting issues:
-        // 1. Literal \n strings -> actual newlines
-        privateKey = privateKey.replace(/\\n/g, '\n');
-
-        // 2. Stray backslashes (often added during copy-paste or as line continuations)
-        // We only keep backslashes if they are part of the BEGIN/END labels (unlikely)
-        // or if they are somehow necessary. In PEM, they are not.
-        privateKey = privateKey.replace(/\\/g, '');
-
-        // 3. Ensure the BEGIN/END headers are on their own lines if they got merged
-        if (privateKey.includes('-----BEGIN PRIVATE KEY-----') && !privateKey.startsWith('-----BEGIN PRIVATE KEY-----\n')) {
-            privateKey = privateKey.replace('-----BEGIN PRIVATE KEY-----', '-----BEGIN PRIVATE KEY-----\n');
-        }
-        if (privateKey.includes('-----END PRIVATE KEY-----') && !privateKey.includes('\n-----END PRIVATE KEY-----')) {
-            privateKey = privateKey.replace('-----END PRIVATE KEY-----', '\n-----END PRIVATE KEY-----');
-        }
-
-        serviceAccount = {
-            projectId: process.env.FIREBASE_PROJECT_ID,
-            privateKey: privateKey.trim(),
-            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        };
-    } else {
-        // Fallback to local JSON file (Development)
-        try {
-            serviceAccount = require('./serviceAccountKey.json');
-            console.log("ℹ️ Initializing Firebase via serviceAccountKey.json");
-        } catch (e) {
-            console.warn("⚠️ Firebase serviceAccountKey.json not found. Expecting Environment Variables.");
-        }
-    }
-
-    if (serviceAccount && !admin.apps.length) {
-        admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount),
-            databaseURL: process.env.FIREBASE_DATABASE_URL || "https://nira---virtual-friend-default-rtdb.asia-southeast1.firebasedatabase.app"
-        });
-        console.log("✅ Firebase Admin initialized successfully.");
-    }
-} catch (error) {
-    console.error("❌ Firebase Initialization Error:", error.message);
-}
-
+const PORT = process.env.PORT || 5001;
 const db = admin.firestore();
 
-// Auth Middleware
+// Auth Middleware (Stub for now)
 const authenticate = async (req, res, next) => {
     const idToken = req.headers.authorization?.split('Bearer ')[1];
-    if (!idToken) {
-        return res.status(401).send('Unauthorized');
-    }
-
+    if (!idToken) return res.status(401).send('Unauthorized');
     try {
         const decodedToken = await admin.auth().verifyIdToken(idToken);
         req.user = decodedToken;
         next();
     } catch (error) {
-        console.error("Auth error:", error);
         res.status(401).send('Unauthorized');
     }
 };
 
-// Root Health Check
-app.get('/', (req, res) => {
-    res.send('NYRA Backend is running. v1.3.1 ✅');
-});
-
 // Routes
+app.get('/', (req, res) => res.send('NYRA Backend is running. v1.3.5 (Soul Restored) ✅'));
+
 const chatRoutes = require('./routes/chat');
 app.use('/api/chat', authenticate, chatRoutes);
 
@@ -126,9 +43,7 @@ app.use('/api/memory', authenticate, memoryRoutes);
 const ttsRoutes = require('./routes/tts');
 app.use('/api/tts', authenticate, ttsRoutes);
 
-app.get('/api/tts-health', (req, res) => res.json({ status: 'TTS Backend is Reachable ✅', time: new Date().toISOString() }));
-
-// Initialize Telegram Bot LAST to avoid blocking startup
-require('./services/telegram');
-
-console.log("✅ [NYRA] All routes Loaded and Services Started.");
+// Start Server
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 NYRA Backend listening on Port ${PORT}`);
+});

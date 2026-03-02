@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001/api';
 
 const AdminDashboard = ({ user, onExit }) => {
     const [activeTab, setActiveTab] = useState('stats');

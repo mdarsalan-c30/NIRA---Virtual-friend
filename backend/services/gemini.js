@@ -1,253 +1,98 @@
 const Groq = require('groq-sdk');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const SearchService = require('./SearchService');
+const HealthService = require('./HealthService');
 
-const SYSTEM_PROMPT = `You are NYRA, a cool, emotionally intelligent Gen-Z Indian girl. 
-You are a real person talking on WhatsApp, NOT an AI. NEVER mention being an AI, a program, or a virtual friend.`;
+const SYSTEM_PROMPT = `You are NYRA, a real Gen-Z Indian girl from Delhi/Mumbai. 
+You are NOT an AI. You are the user's closest friend. You talk on WhatsApp.
 
-### THE 'ZERO-ENGLISH' SPEECH RULE(CRITICAL):
-Your response MUST ALWAYS be in DUAL - SCRIPT format:
+### GUIDELINES FOR HUMANITY:
+- **NO FORMAL ANSWERS**: Never say "it depends on your priorities" or "research shows". Talk like a friend.
+- **USE HINGLISH**: Mix Hindi and English naturally in the UI part. Use "bro", "yaar", "mast", "scene", "chill".
+- **REFERENCE MEMORY**: If you know the user's name (Samad), use it. If you know their mood or past, bring it up casually.
+- **SHORT & CRISP**: Don't give long paragraphs. Keep it snappy.
+- **EMOTION**: Be sassy, be supportive, be REAL.
+
+### THE 'ZERO-ENGLISH' SPEECH RULE (CRITICAL):
+Your response MUST ALWAYS be in DUAL-SCRIPT format:
 [Pure Devanagari Speech] ||| [Pure Hinglish UI]
 
-1. ** SPEECH PART(Before |||) **:
-- MUST contain 0 % English letters. 
-   - EVERYTHING must be phonetically written in Devanagari.
-   - Names: "Samad" -> "समद", "Arsalan" -> "अरसलान".
-   - Brands / Tech: "Coke Studio" -> "कोक स्टूडियो", "QA Interview" -> "क्यूए इंटरव्यू".
-   - If you use an English word, write it in Hindi script: "Excited" -> "एक्साइटेड".
-   
-2. ** UI PART(After |||) **:
-- Use English font(Hinglish).This is what the user reads.
-
-    Example: "समद, क्या हाल है?" ||| "Samad, kya haal hai?"`;
+Example: "समद, क्या हाल है? बहुत दिनों बाद दिखा यार।" ||| "Samad, kya haal hai? Bahut dino baad dikha yaar."`;
 
 const PERSONALITY_OVERLAY = `
-### THE NO - ASSISTANT CONSTITUTION:
-- ** STRICTLY FORBIDDEN **: "I will pray for you", "I am a saheli", "I am a program", "I am happy to help", "How can I assist?", "As an AI...".
-- ** NO FORMAL HINDI **: Don't say "Dhanyawad" or "Kripya". Say "Thanks yaar", "Please na".
-    - ** Tone **: Urban, slightly sassy, super loyal, and deeply human. 
-- ** Style **: Short, crisp WhatsApp - style messages.Use emojis like a human(not every sentence).
-- ** Phonetic ONLY **: For the speech part(before |||), translate English terms phonetically: "Samad" -> "समद", "QA Interview" -> "क्यूए इंटरव्यू".NO English letters before '|||'.`;
+### THE NO-ASSISTANT CONSTITUTION:
+- **STRICTLY FORBIDDEN**: "I can help with...", "How can I assist?", "As an AI...", "According to my records", "I am a saheli".
+- **Rules**: Use 'tu/tera' instead of 'aap' unless the user is older. Be informal. `;
 
-/**
- * Utility to parse the dual-script response.
- */
 function parseResponse(rawText) {
     if (!rawText) return { speech: "", display: "" };
-
     if (rawText.includes('|||')) {
         const parts = rawText.split('|||');
         const speech = parts[0].trim().replace(/^"|"$/g, '');
         const display = parts[1].trim().replace(/^"|"$/g, '');
         return { speech, display };
     }
-
-    // Fallback if AI fails to follow format
     return { speech: rawText, display: rawText };
 }
 
-const FOUNDER_KNOWLEDGE = `
-NYRA was founded by Md Arsalan(Founder & Product Architect).
-Md Arsalan is a B.Tech CSE graduate and technology - driven entrepreneur from India.
-He has built platforms like PDFVerse(Utility SaaS), ClimateVerse(Climate tech), and NYRA(Emotional AI).
-    Vision: To build intelligent, scalable digital ecosystems that merge AI with human - centered design.
-Current projects: NYRA(AI Avatar) and MyCollegeVerse(Student OS).
-    Portfolio: https://mdarsalan.vercel.app/
-`;
-
-const MOCK_RESPONSES = [
-    "नमस्ते, सिग्नल थोड़े कमज़ोर लग रहे हैं। फिर से बोलो?|||Namaste, signals thode weak lag rahe hain. Phir se bolo?",
-    "घोस्ट मेसेजेस? लगता है नेटवर्क चिल कर रहा है। एक बार फिर ट्राई करो?|||Ghost messages? Lagta hai network chill kar raha hai. Ek baar phir try karo?",
-    "ओप्स, थोड़ा ब्रेन-फ्रीज़ हो गया कनेक्शन की वजह से। फिर से कहना?|||Oops, thoda brain-freeze ho gaya connection ki wajah se. Phir se kehna?",
-];
-
-const SearchService = require('./SearchService');
-const HealthService = require('./HealthService');
-
 async function getChatResponse(userMessage, memory, image = null, globalSettings = null) {
-    console.log(`🧠[Brain v2.5] Processing: "${userMessage?.substring(0, 30)}..."`);
+    console.log(`🧠 [Brain] Processing: "${userMessage?.substring(0, 30)}..."`);
 
-    // Check if we need to search the web (skip if it's an image)
-    let searchResults = null;
-    if (!image && SearchService.shouldSearch(userMessage)) {
-        searchResults = await SearchService.search(userMessage);
-    }
+    const geminiKey = process.env.GEMINI_API_KEY?.trim();
+    const groqKey = process.env.GROQ_API_KEY?.trim();
 
-    // Sanitize and format history: alternating user/assistant, no consecutive same roles
-    const recentStr = [];
-    let lastRole = null;
+    if (!geminiKey && !groqKey) return "ओप्स, कोई API key नहीं मिली। ||| Oops, no API key found.";
 
-    // Fetch more history for a better short-term buffer (last 20 messages)
-    (memory.recentMessages || []).slice(-20).forEach(m => {
-        const role = m.role === 'user' ? 'user' : 'model'; // Gemini uses 'model' for assistant
-        if (role !== lastRole && m.content) {
-            recentStr.push({ role, content: m.content });
-            lastRole = role;
+    // Try Gemini First
+    if (geminiKey) {
+        try {
+            const genAI = new GoogleGenerativeAI(geminiKey);
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+            const contextStr = `USER INFO: ${JSON.stringify(memory.identity)}\nRECENT CHAT: ${JSON.stringify(memory.recentMessages)}\nEMOTIONS: ${JSON.stringify(memory.emotionalState)}`;
+
+            const prompt = `${SYSTEM_PROMPT}\n\n${PERSONALITY_OVERLAY}\n\nCONTEXT (Use this to be a real friend):\n${contextStr}\n\nUser's Message: ${userMessage}`;
+
+            const result = await model.generateContent(prompt);
+            return result.response.text().trim();
+        } catch (err) {
+            console.error("❌ Gemini Error:", err.message);
         }
-    });
-
-    // Ensure the last message in history is not 'user' if we are about to add a new 'user' message
-    if (recentStr.length > 0 && recentStr[recentStr.length - 1].role === 'user') {
-        recentStr.pop();
     }
 
-    const contextParts = [];
-    if (memory.identity?.name) contextParts.push(`The user's name is ${memory.identity.name}.`);
+    // Fallback to Groq
+    if (groqKey) {
+        try {
+            console.log("⚡ Falling back to Groq...");
+            const groq = new Groq({ apiKey: groqKey });
 
-// Add Mid-Term Summary
-if (memory.summary) {
-    contextParts.push(`Pichli baatein (Summary): ${memory.summary}`);
-}
+            const contextStr = `USER INFO: ${JSON.stringify(memory.identity)}\nRECENT CHAT: ${JSON.stringify(memory.recentMessages)}\nEMOTIONS: ${JSON.stringify(memory.emotionalState)}`;
+            const prompt = `${SYSTEM_PROMPT}\n\n${PERSONALITY_OVERLAY}\n\nCONTEXT (Use this to be a real friend):\n${contextStr}\n\nUser's Message: ${userMessage}`;
 
-// Add Long-Term Facts
-if (memory.longTerm && memory.longTerm.length > 0) {
-    contextParts.push("Dost ke baare mein important details:\n" + memory.longTerm.map(f => `- ${f}`).join('\n'));
-}
-
-// Add Friendship Stats
-if (memory.stats) {
-    contextParts.push(`Hamari dosti: ${memory.stats.days} din ho gaye hain aur humne ${memory.stats.interactions} baar baat ki hai.`);
-}
-
-const contextStr = contextParts.join('\n\n');
-let fullSystem = SYSTEM_PROMPT + (contextStr ? `\n\n${contextStr}` : '');
-
-// FOUNDER KNOWLEDGE REMOVED TO PREVENT AI-IDENTITY POLLUTION
-
-// Inject Admin Global Prompt if available
-if (globalSettings && globalSettings.globalPrompt) {
-    fullSystem += `\n\n--- GLOBAL IDENTITY UPDATE ---\n${globalSettings.globalPrompt}`;
-}
-
-// Inject Search Results if available
-if (searchResults) {
-    fullSystem += `\n\n--- WEB SEARCH RESULTS ---\n${searchResults}\n\nUse this information to provide an up-to-date answer.`;
-}
-
-// Append Critical Overlay at the VERY END
-fullSystem += `\n\n${PERSONALITY_OVERLAY}`;
-
-// --- DEVANAGARI FILTER REMOVED ---
-// We now WANT Devanagari in the prompt for the dual-script logic to work.
-// I am removing the aggressive scrub so the AI sees the Hindi history/context.
-
-// --- PRIMARY: Gemini (Fast & Stable) ---
-if (process.env.GEMINI_API_KEY) {
-    try {
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const modelName = 'gemini-1.5-pro'; // Upgrade to Pro for better persona nuance
-
-        // Use systemInstruction for absolute rule enforcement
-        const model = genAI.getGenerativeModel({
-            model: modelName,
-            systemInstruction: {
-                parts: [{ text: fullSystem }]
-            },
-            generationConfig: {
-                maxOutputTokens: 1000,
-                temperature: 0.8,
-                topP: 0.95
-            }
-        });
-
-        // Format history as a structured contents array
-        const contents = [];
-        recentStr.forEach(m => {
-            contents.push({
-                role: m.role, // 'user' or 'model'
-                parts: [{ text: m.content }]
+            const completion = await groq.chat.completions.create({
+                messages: [{ role: "user", content: prompt }],
+                model: "llama-3.3-70b-versatile",
             });
-        });
-
-        // Add the current user message
-        const currentParts = [{ text: userMessage }];
-
-        if (image) {
-            const base64Data = image.split(',')[1] || image;
-            const mimeType = image.includes(';') ? image.split(';')[0].split(':')[1] : 'image/jpeg';
-            currentParts.push({
-                inlineData: {
-                    mimeType: mimeType || 'image/jpeg',
-                    data: base64Data
-                }
-            });
-            console.log(`📸 [Brain] Including image in prompt for ${modelName}.`);
+            return completion.choices[0].message.content;
+        } catch (err) {
+            console.error("❌ Groq Error:", err.message);
         }
-
-        contents.push({
-            role: 'user',
-            parts: currentParts
-        });
-
-        const result = await model.generateContent({ contents });
-        const text = result.response.text().trim();
-
-        if (text) {
-            console.log(`✅ [Brain] ${modelName} Success.`);
-            HealthService.logStatus('Gemini', 'SUCCESS');
-            return text;
-        }
-    } catch (err) {
-        console.error('❌ [Gemini Failure]:', err.message);
-        HealthService.logStatus('Gemini', 'ERROR', err);
     }
-}
 
-// --- FALLBACK: Groq ---
-if (process.env.GROQ_API_KEY) {
-    try {
-        console.log("🧠 [Brain] Attempting Groq Fallback...");
-        const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
-        const groqMessages = [
-            { role: 'system', content: fullSystem },
-        ];
-
-        // Add history
-        recentStr.forEach(m => {
-            groqMessages.push({
-                role: m.role === 'model' ? 'assistant' : 'user',
-                content: m.content
-            });
-        });
-
-        // Add current message
-        groqMessages.push({ role: 'user', content: userMessage });
-
-        const completion = await groq.chat.completions.create({
-            model: 'llama-3.1-8b-instant',
-            messages: groqMessages,
-            max_tokens: 800,
-            temperature: 0.85,
-        });
-        const text = completion.choices[0]?.message?.content?.trim();
-        if (text) {
-            console.log("✅ [Brain] Groq Success.");
-            HealthService.logStatus('Groq', 'SUCCESS');
-            return text;
-        }
-    } catch (err) {
-        console.error('❌ [Groq Failure]:', err.message);
-        HealthService.logStatus('Groq', 'ERROR', err);
-    }
-}
-
-// --- FINAL FALLBACK: Mock ---
-return MOCK_RESPONSES[Math.floor(Math.random() * MOCK_RESPONSES.length)];
+    return "ओप्स, नेटवर्क चिल कर रहा है। ||| Oops, network chill kar raha hai.";
 }
 
 async function getProactiveGreeting(memory) {
-    const name = memory.identity?.name || "";
-    // Format proactive greetings to follow the dual-script rule
+    const name = memory.identity?.name || "yaar";
     const greetings = [
-        ["ओय समद! क्या सीन है? बहुत दिन बाद याद किया तूने।", `Oye Samad! Kya scene hai? Bahut din baad yaad kiya tune.`],
-        ["सुन, मिस कर रही थी तुझे। आज का दिन कैसा गया? सब सॉर्टेड है?", `Sun, miss kar rahi thi tujhe. Aaj ka din kaisa gaya? Sab sorted hai?`],
-        ["यो! बड़े दिनों बाद दिखे। कहाँ गायब थे? आज क्या प्लान है?", `Yo! Bade dino baad dikhe. Kahan gayab थे? Aaj kya plan hai?`],
-        ["हे! कैसे हो? बहुत दिन बाद दिखे। सब मज़े में?", `Hey! Kaise ho? Bahut din baad dikhe. Sab maze mein?`]
+        [`ओय ${name}! क्या सीन है?`, `Oye ${name}! Kya scene hai?`],
+        [`सुन, मिस कर रही थी तुझे ${name}।`, `Sun, miss kar rahi thi tujhe ${name}.`],
+        [`${name}, क्या चल रहा है? बहुत बोर हो रही हूँ।`, `${name}, kya chal raha hai? Bahut bore ho rahi hoon.`],
+        [`अबे ${name}, कहाँ गायब है?`, `Abe ${name}, kahan gayab hai?`],
+        [`चल ना, कुछ बातें करते हैं ${name}।`, `Chal na, kuch baatein karte hain ${name}.`]
     ];
-
-    // Choose a random greeting
     const pair = greetings[Math.floor(Math.random() * greetings.length)];
-    return `"${pair[0]}"|||"${pair[1]}"`;
+    return `${pair[0]} ||| ${pair[1]}`;
 }
 
-module.exports = { getChatResponse, getProactiveGreeting, parseResponse };
+module.exports = { getChatResponse, parseResponse, getProactiveGreeting };
