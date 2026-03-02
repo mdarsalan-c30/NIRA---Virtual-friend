@@ -128,25 +128,37 @@ async function getChatResponse(userMessage, memory, image = null, globalSettings
     if (process.env.GEMINI_API_KEY) {
         try {
             const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-            const modelName = 'gemini-2.5-flash';
+            const modelName = 'gemini-1.5-flash'; // Correct stable model name
+
+            // Use systemInstruction for absolute rule enforcement
             const model = genAI.getGenerativeModel({
                 model: modelName,
-                generationConfig: { maxOutputTokens: 1000, temperature: 0.8 }
+                systemInstruction: {
+                    parts: [{ text: fullSystem }]
+                },
+                generationConfig: {
+                    maxOutputTokens: 1000,
+                    temperature: 0.8,
+                    topP: 0.95
+                }
             });
 
-            // Format recent history for Gemini
-            const historyText = recentStr.map(m => `${m.role === 'user' ? 'User' : 'NYRA'}: ${m.content}`).join('\n');
+            // Format history as a structured contents array
+            const contents = [];
+            recentStr.forEach(m => {
+                contents.push({
+                    role: m.role, // 'user' or 'model'
+                    parts: [{ text: m.content }]
+                });
+            });
 
-            const finalPrompt = `${fullSystem}\n\nRecent Chat History:\n${historyText}\n\nUser: ${userMessage}\nNYRA:`;
-
-            const promptParts = [
-                { text: finalPrompt }
-            ];
+            // Add the current user message
+            const currentParts = [{ text: userMessage }];
 
             if (image) {
                 const base64Data = image.split(',')[1] || image;
                 const mimeType = image.includes(';') ? image.split(';')[0].split(':')[1] : 'image/jpeg';
-                promptParts.push({
+                currentParts.push({
                     inlineData: {
                         mimeType: mimeType || 'image/jpeg',
                         data: base64Data
@@ -155,19 +167,21 @@ async function getChatResponse(userMessage, memory, image = null, globalSettings
                 console.log(`📸 [Brain] Including image in prompt for ${modelName}.`);
             }
 
-            const result = await model.generateContent(promptParts);
+            contents.push({
+                role: 'user',
+                parts: currentParts
+            });
+
+            const result = await model.generateContent({ contents });
             const text = result.response.text().trim();
+
             if (text) {
-                // We no longer strip Devanagari globally here because the response is DUAL-FORMAT
                 console.log(`✅ [Brain] ${modelName} Success.`);
                 HealthService.logStatus('Gemini', 'SUCCESS');
                 return text;
             }
         } catch (err) {
             console.error('❌ [Gemini Failure]:', err.message);
-            if (err.response) {
-                console.error('Gemini Error Body:', JSON.stringify(err.response, null, 2));
-            }
             HealthService.logStatus('Gemini', 'ERROR', err);
         }
     }
@@ -178,17 +192,23 @@ async function getChatResponse(userMessage, memory, image = null, globalSettings
             console.log("🧠 [Brain] Attempting Groq Fallback...");
             const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-            // Map roles for Groq (user/assistant)
-            let historyTextGroq = recentStr.map(m => `${m.role === 'model' ? 'assistant' : 'user'}: ${m.content}`).join('\n');
-            historyTextGroq = historyTextGroq.replace(/[\u0900-\u097F]/g, '');
-
             const groqMessages = [
                 { role: 'system', content: fullSystem },
-                { role: 'user', content: `History:\n${historyTextGroq}\n\nMessage: ${userMessage}\n(Rule: English font only, Natural Gen-Z friend tone.)` }
             ];
 
+            // Add history
+            recentStr.forEach(m => {
+                groqMessages.push({
+                    role: m.role === 'model' ? 'assistant' : 'user',
+                    content: m.content
+                });
+            });
+
+            // Add current message
+            groqMessages.push({ role: 'user', content: userMessage });
+
             const completion = await groq.chat.completions.create({
-                model: 'llama-3.1-8b-instant', // Stable 2026 replacement
+                model: 'llama-3.1-8b-instant',
                 messages: groqMessages,
                 max_tokens: 800,
                 temperature: 0.85,
