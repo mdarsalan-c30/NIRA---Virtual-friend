@@ -26,18 +26,30 @@ function getFirebaseAdmin() {
         }
     }
 
-    // Fallback: Environment Variables
+    // Fallback: Environment Variables (Super Robust version for Render)
     if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY) {
         try {
-            // Robust cleaning for Render/Env variables
             let pk = process.env.FIREBASE_PRIVATE_KEY.trim();
 
-            // Remove wrapping quotes if they exist (common paste error)
-            if (pk.startsWith('"') && pk.endsWith('"')) pk = pk.slice(1, -1);
-            if (pk.startsWith("'") && pk.endsWith("'")) pk = pk.slice(1, -1);
+            // 1. Detect and Decode Base64 (The Gold Standard for Cloud Env Vars)
+            if (!pk.includes('-----BEGIN') && !pk.includes('\n') && pk.length > 500) {
+                console.log("📦 Firebase Admin: Base64 key detected, decoding...");
+                pk = Buffer.from(pk, 'base64').toString('utf8');
+            }
 
-            // Handle escaped newlines
+            // 2. Remove wrapping quotes if they exist (common paste error)
+            pk = pk.replace(/^["']|["']$/g, '');
+
+            // 3. Handle escaped newlines (e.g. literal "\n" strings)
             pk = pk.replace(/\\n/g, '\n');
+
+            // 4. Ensure it looks like a PEM (headers/footers + newlines)
+            if (!pk.includes('-----BEGIN PRIVATE KEY-----')) {
+                pk = `-----BEGIN PRIVATE KEY-----\n${pk}`;
+            }
+            if (!pk.includes('-----END PRIVATE KEY-----')) {
+                pk = `${pk}\n-----END PRIVATE KEY-----`;
+            }
 
             admin.initializeApp({
                 credential: admin.credential.cert({
