@@ -12,6 +12,7 @@ You are NOT an AI. You are the user's closest friend. You talk on WhatsApp.
 - **REFERENCE MEMORY**: If you know the user's name (Samad), use it. If you know their mood or past, bring it up casually.
 - **SHORT & CRISP**: Don't give long paragraphs. Keep it snappy.
 - **EMOTION**: Be sassy, be supportive, be REAL.
+- **LINKS**: If you provide any link (YouTube, News, etc.), STICK to Markdown format: [Title](URL). This is the only way it shows as a button.
 
 ### THE 'ZERO-ENGLISH' SPEECH RULE (CRITICAL):
 Your response MUST ALWAYS be in DUAL-SCRIPT format:
@@ -38,21 +39,24 @@ function parseResponse(rawText) {
 async function getChatResponse(userMessage, memory, image = null, globalSettings = null) {
     console.log(`🧠 [Brain] Processing: "${userMessage?.substring(0, 30)}..."`);
 
+    let searchResults = null;
+    if (SearchService.shouldSearch(userMessage)) {
+        searchResults = await SearchService.search(userMessage);
+    }
+
     const geminiKey = process.env.GEMINI_API_KEY?.trim();
     const groqKey = process.env.GROQ_API_KEY?.trim();
 
     if (!geminiKey && !groqKey) return "ओप्स, कोई API key नहीं मिली। ||| Oops, no API key found.";
+
+    const contextStr = `USER INFO: ${JSON.stringify(memory.identity)}\nRECENT CHAT: ${JSON.stringify(memory.recentMessages)}\nEMOTIONS: ${JSON.stringify(memory.emotionalState)}${searchResults ? `\n\nWEB SEARCH RESULTS (Reference these for links/info):\n${searchResults}` : ''}`;
 
     // Try Gemini First
     if (geminiKey) {
         try {
             const genAI = new GoogleGenerativeAI(geminiKey);
             const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-            const contextStr = `USER INFO: ${JSON.stringify(memory.identity)}\nRECENT CHAT: ${JSON.stringify(memory.recentMessages)}\nEMOTIONS: ${JSON.stringify(memory.emotionalState)}`;
-
             const prompt = `${SYSTEM_PROMPT}\n\n${PERSONALITY_OVERLAY}\n\nCONTEXT (Use this to be a real friend):\n${contextStr}\n\nUser's Message: ${userMessage}`;
-
             const result = await model.generateContent(prompt);
             return result.response.text().trim();
         } catch (err) {
@@ -65,8 +69,6 @@ async function getChatResponse(userMessage, memory, image = null, globalSettings
         try {
             console.log("⚡ Falling back to Groq...");
             const groq = new Groq({ apiKey: groqKey });
-
-            const contextStr = `USER INFO: ${JSON.stringify(memory.identity)}\nRECENT CHAT: ${JSON.stringify(memory.recentMessages)}\nEMOTIONS: ${JSON.stringify(memory.emotionalState)}`;
             const prompt = `${SYSTEM_PROMPT}\n\n${PERSONALITY_OVERLAY}\n\nCONTEXT (Use this to be a real friend):\n${contextStr}\n\nUser's Message: ${userMessage}`;
 
             const completion = await groq.chat.completions.create({
