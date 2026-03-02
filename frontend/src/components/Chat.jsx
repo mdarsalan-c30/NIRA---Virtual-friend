@@ -249,6 +249,10 @@ const Chat = () => {
                 const parts = aiResponse.split('|||');
                 speechResponse = parts[0].trim().replace(/^"|"$/g, ''); // Speech (Hindi)
                 displayResponse = parts[1].trim().replace(/^"|"$/g, ''); // UI (English Font)
+
+                // CRITICAL SAFETY: Remove any accidental English letters from speechResponse to avoid robotic accent
+                speechResponse = speechResponse.replace(/[a-zA-Z]/g, '');
+
                 console.log("🗣️ Speech Part (Devanagari):", speechResponse);
                 console.log("📱 UI Part (English):", displayResponse);
             } else {
