@@ -21,9 +21,26 @@ const PERSONALITY_OVERLAY = `
    User: "Khana khaya?"
    Response: "हाँ, मैंने अभी खाना खाया। तुमने खाया?"|||"Haan, maine abhi kha liya. Tumne khaya?"
 
-3. **SPEECH PART**: MUST be pure Devanagari.
-4. **UI PART**: MUST be English Font ONLY. Include specific YouTube Markdown links here if needed.
-5. **TONE**: Gen-Z, warm, avoid spamming 'bhai'.`;
+3. **SPEECH PART**: MUST be pure Devanagari. No English words here.
+4. **UI PART**: MUST be English Font ONLY. No Devanagari here. Include specific YouTube Markdown links here if needed.
+5. **TONE**: Gen-Z, warm, urban Indian. Avoid 'bhai' overdose. Stay human.`;
+
+/**
+ * Utility to parse the dual-script response.
+ */
+function parseResponse(rawText) {
+    if (!rawText) return { speech: "", display: "" };
+
+    if (rawText.includes('|||')) {
+        const parts = rawText.split('|||');
+        const speech = parts[0].trim().replace(/^"|"$/g, '');
+        const display = parts[1].trim().replace(/^"|"$/g, '');
+        return { speech, display };
+    }
+
+    // Fallback if AI fails to follow format
+    return { speech: rawText, display: rawText };
+}
 
 const FOUNDER_KNOWLEDGE = `
 NYRA was founded by Md Arsalan (Founder & Product Architect).
@@ -196,19 +213,18 @@ async function getChatResponse(userMessage, memory, image = null, globalSettings
     return MOCK_RESPONSES[Math.floor(Math.random() * MOCK_RESPONSES.length)];
 }
 
-async function getProactiveGreeting(memory) {
-    const name = memory.identity?.name || "";
-    const greetings = [
-        `Hey ${name}! Bahut din baad dikhe. Kya scene hai?`,
-        `Hi ${name}, miss kiya tumhe! Aaj ka din kaisa gaya?`,
-        `Yo ${name}! Bade dino baad yaad kiya. Sab theek?`,
-        `Oye ${name}, kahan gayab the? Aaj kya plan hai?`,
-        `Hey! Kaise ho? Bahut din baad dikhe.`
-    ];
+// Format proactive greetings to follow the dual-script rule
+const greetings = [
+    ["नमस्ते! बहुत दिन बाद दिखे। क्या सीन है?", `Hey ${name}! Bahut din baad dikhe. Kya scene hai?`],
+    ["सुनो, तुम्हें मिस किया! आज का दिन कैसा गया?", `Hi ${name}, miss kiya tumhe! Aaj ka din kaisa gaya?`],
+    ["यौ! बड़े दिनों बाद याद किया। सब ठीक?", `Yo ${name}! Bade dino baad yaad kiya. Sab theek?`],
+    ["ओए, कहाँ गायब थे? आज क्या प्लान है?", `Oye ${name}, kahan gayab the? Aaj kya plan hai?`],
+    ["हे! कैसे हो? बहुत दिन बाद दिखे।", "Hey! Kaise ho? Bahut din baad dikhe."]
+];
 
-    // Choose a random greeting
-    const selected = greetings[Math.floor(Math.random() * greetings.length)];
-    return selected.trim();
+// Choose a random greeting
+const pair = greetings[Math.floor(Math.random() * greetings.length)];
+return `"${pair[0]}"|||"${pair[1]}"`;
 }
 
-module.exports = { getChatResponse, getProactiveGreeting };
+module.exports = { getChatResponse, getProactiveGreeting, parseResponse };

@@ -9,6 +9,14 @@ console.log("🎬 [NYRA] System Booting Up...");
 console.log(`ℹ️ Node Version: ${process.version}`);
 console.log(`ℹ️ Environment: ${process.env.NODE_ENV || 'development'}`);
 
+// Global error handling for production stability
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('⚠️ Unhandled Rejection at:', promise, 'reason:', reason);
+});
+process.on('uncaughtException', (err) => {
+    console.error('❌ Uncaught Exception:', err);
+});
+
 
 
 const express = require('express');

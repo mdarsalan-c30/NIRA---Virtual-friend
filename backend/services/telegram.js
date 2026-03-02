@@ -51,10 +51,11 @@ class TelegramService {
             try {
                 // 1. Fetch Global Settings & User Data
                 const profileRef = db.collection('users').doc(tgId);
-                const [settingsDoc, profileDoc, stats] = await Promise.all([
+                const [settingsDoc, profileDoc, stats, conversationsSnapshot] = await Promise.all([
                     db.collection('system').doc('settings').get(),
                     profileRef.get(),
-                    memoryService.getFriendshipStats(tgId)
+                    memoryService.getFriendshipStats(tgId),
+                    profileRef.collection('conversations').orderBy('timestamp', 'desc').limit(10).get().catch(() => ({ docs: [] }))
                 ]);
 
                 const globalSettings = settingsDoc.exists ? settingsDoc.data() : { trialLimitMinutes: 5, maintenanceMode: false };
@@ -82,8 +83,8 @@ class TelegramService {
                 // Simple memory for Telegram for now (can be expanded)
                 const memory = {
                     identity: userData,
-                    longTerm: [], // Could fetch from Firestore if needed
-                    recentMessages: [], // Could fetch recent conversions
+                    longTerm: [],
+                    recentMessages: conversationsSnapshot.docs.map(doc => doc.data()).reverse(),
                     stats
                 };
 
@@ -119,7 +120,8 @@ class TelegramService {
                 await batch.commit();
 
                 // 6. Send Response
-                await ctx.reply(responseText, { parse_mode: 'Markdown' });
+                const parsed = gemini.parseResponse(responseText);
+                await ctx.reply(parsed.display, { parse_mode: 'Markdown' });
 
             } catch (error) {
                 console.error("❌ [Telegram Service] Error:", error.message);
