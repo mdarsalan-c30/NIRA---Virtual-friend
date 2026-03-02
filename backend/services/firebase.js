@@ -29,7 +29,16 @@ function getFirebaseAdmin() {
     // Fallback: Environment Variables
     if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY) {
         try {
-            const pk = process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n');
+            // Robust cleaning for Render/Env variables
+            let pk = process.env.FIREBASE_PRIVATE_KEY.trim();
+
+            // Remove wrapping quotes if they exist (common paste error)
+            if (pk.startsWith('"') && pk.endsWith('"')) pk = pk.slice(1, -1);
+            if (pk.startsWith("'") && pk.endsWith("'")) pk = pk.slice(1, -1);
+
+            // Handle escaped newlines
+            pk = pk.replace(/\\n/g, '\n');
+
             admin.initializeApp({
                 credential: admin.credential.cert({
                     projectId: process.env.FIREBASE_PROJECT_ID,
