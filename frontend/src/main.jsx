@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 
-console.log("%c NYRA v1.3.3 (Brain v3.0) - SOUL & VOICE REBORN ", "background: #f472b6; color: white; font-weight: bold; padding: 2px 5px; borderRadius: 3px;");
+console.log("%c NYRA v1.3.4 (Brain v4.0) - SOUL RESTORED 🌸 ", "background: #ff00ff; color: white; font-weight: bold; padding: 2px 5px; borderRadius: 3px;");
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
