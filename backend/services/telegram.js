@@ -129,20 +129,24 @@ class TelegramService {
             }
         });
 
-        // In development, we skip bot.launch() to avoid conflicts with the production instance on Render.
-        // If you REALLY want to run it locally, set START_TELEGRAM_LOCAL=true in your .env
+        // In production, we start the bot launch asynchronously to avoid blocking the server startup.
         const isProduction = process.env.NODE_ENV === 'production';
         const forceLocal = process.env.START_TELEGRAM_LOCAL === 'true';
 
         if (isProduction || forceLocal) {
-            try {
-                this.bot.launch();
-                console.log(`🚀 [Telegram] Bot is running (${isProduction ? 'Production' : 'Local Force'})...`);
-            } catch (err) {
-                console.error("❌ [Telegram] Failed to launch bot:", err.message);
-            }
+            setImmediate(() => {
+                try {
+                    this.bot.launch().then(() => {
+                        console.log(`🚀 [Telegram] Bot is running (${isProduction ? 'Production' : 'Local Force'})...`);
+                    }).catch(err => {
+                        console.error("❌ [Telegram] Bot failed to launch:", err.message);
+                    });
+                } catch (err) {
+                    console.error("❌ [Telegram] Sync error during launch:", err.message);
+                }
+            });
         } else {
-            console.log("ℹ️ [Telegram] Bot launch skipped in Local Dev to avoid conflict with Render. (Set START_TELEGRAM_LOCAL=true to override)");
+            console.log("ℹ️ [Telegram] Bot launch skipped in Local Dev. (Set START_TELEGRAM_LOCAL=true to override)");
         }
 
         // Enable graceful stop

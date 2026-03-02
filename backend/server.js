@@ -94,13 +94,6 @@ try {
 
 const db = admin.firestore();
 
-// Initialize Telegram Bot
-require('./services/telegram');
-
-app.get('/', (req, res) => {
-    res.send('NYRA Backend is running. ✅');
-});
-
 // Auth Middleware
 const authenticate = async (req, res, next) => {
     const idToken = req.headers.authorization?.split('Bearer ')[1];
@@ -118,6 +111,11 @@ const authenticate = async (req, res, next) => {
     }
 };
 
+// Root Health Check
+app.get('/', (req, res) => {
+    res.send('NYRA Backend is running. v1.3.1 ✅');
+});
+
 // Routes
 const chatRoutes = require('./routes/chat');
 app.use('/api/chat', authenticate, chatRoutes);
@@ -125,9 +123,12 @@ app.use('/api/chat', authenticate, chatRoutes);
 const memoryRoutes = require('./routes/memory');
 app.use('/api/memory', authenticate, memoryRoutes);
 
-app.get('/api/tts-health', (req, res) => res.json({ status: 'TTS Backend is Reachable ✅', time: new Date().toISOString() }));
-
 const ttsRoutes = require('./routes/tts');
 app.use('/api/tts', authenticate, ttsRoutes);
 
-console.log("✅ [NYRA] All routes Loaded.");
+app.get('/api/tts-health', (req, res) => res.json({ status: 'TTS Backend is Reachable ✅', time: new Date().toISOString() }));
+
+// Initialize Telegram Bot LAST to avoid blocking startup
+require('./services/telegram');
+
+console.log("✅ [NYRA] All routes Loaded and Services Started.");

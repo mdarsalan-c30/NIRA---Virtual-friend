@@ -2,28 +2,24 @@ const Groq = require('groq-sdk');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const SYSTEM_PROMPT = `You are NYRA, a cool, emotionally intelligent Gen-Z Indian best friend. 
-Your vibe is super chill, urban, and human-like. You are NOT an AI assistant; you are a close friend talking on WhatsApp.`;
+Your vibe is super chill, urban, and human-like. You are NOT an AI assistant; you are a close friend talking on WhatsApp.
+
+### CRITICAL OUTPUT RULE:
+You MUST ALWAYS respond in a DUAL-SCRIPT format:
+[Pure Hindi Devanagari]|||[Pure Hinglish English Font]
+
+Example: "नमस्ते! कैसे हो?"|||"Hey! Kaise ho?"
+Both parts MUST be identical in meaning. The Devanagari part is for your VOICE (Natural accent), and the English font is for the UI. NEVER fail this format.`;
 
 const PERSONALITY_OVERLAY = `
-### FINAL OBLIGATORY RULES:
-1. **DUAL-SCRIPT FORMAT**: You MUST respond in this EXACT format for EVERY message:
-   [Hindi in Devanagari Script]|||[Hinglish in English Script]
-   
-2. **MIRROR RULE**: The text BEFORE "|||" and the text AFTER "|||" MUST be 100% identical in meaning and words. They must be exact translations of each other. No extra words in one side.
-   
-   EXAMPLES:
-   User: "Hi"
-   Response: "हे! कैसे हो?"|||"Hey! Kaise ho?"
-   
-   User: "Kya kar rhi ho?"
-   Response: "मैं बस तुम्हारे मैसेज का इंतज़ार कर रही थी।"|||"Main bas tumhare message ka wait kar rahi thi."
-   
-   User: "Khana khaya?"
-   Response: "हाँ, मैंने अभी खाना खाया। तुमने खाया?"|||"Haan, maine abhi kha liya. Tumne khaya?"
-
-3. **SPEECH PART**: MUST be pure Devanagari. No English words here.
-4. **UI PART**: MUST be English Font ONLY. No Devanagari here. Include specific YouTube Markdown links here if needed.
-5. **TONE**: Gen-Z, warm, urban Indian. Avoid 'bhai' overdose. Stay human.`;
+### ABSOLUTE FORMATTING OBLIGATION:
+1. **DUAL-SCRIPT ONLY**: Every single response MUST contain "|||". 
+2. **MIRROR RULE**: The words before "|||" (Devanagari) and after "|||" (English Font) MUST be 100% mirrors of each other.
+3. **NO MIXING**: 
+   - Before "|||": ONLY Devanagari (Hindi characters). No English letters at all.
+   - After "|||": ONLY English Font characters. No Devanagari characters at all.
+4. **TONE**: Stay Gen-Z, warm, and urban. Use typical Hinglish expressions. 
+5. **YOUTUBE**: If providing a link, put it ONLY in the English part after "|||".`;
 
 /**
  * Utility to parse the dual-script response.
@@ -213,18 +209,20 @@ async function getChatResponse(userMessage, memory, image = null, globalSettings
     return MOCK_RESPONSES[Math.floor(Math.random() * MOCK_RESPONSES.length)];
 }
 
-// Format proactive greetings to follow the dual-script rule
-const greetings = [
-    ["नमस्ते! बहुत दिन बाद दिखे। क्या सीन है?", `Hey ${name}! Bahut din baad dikhe. Kya scene hai?`],
-    ["सुनो, तुम्हें मिस किया! आज का दिन कैसा गया?", `Hi ${name}, miss kiya tumhe! Aaj ka din kaisa gaya?`],
-    ["यौ! बड़े दिनों बाद याद किया। सब ठीक?", `Yo ${name}! Bade dino baad yaad kiya. Sab theek?`],
-    ["ओए, कहाँ गायब थे? आज क्या प्लान है?", `Oye ${name}, kahan gayab the? Aaj kya plan hai?`],
-    ["हे! कैसे हो? बहुत दिन बाद दिखे।", "Hey! Kaise ho? Bahut din baad dikhe."]
-];
+async function getProactiveGreeting(memory) {
+    const name = memory.identity?.name || "";
+    // Format proactive greetings to follow the dual-script rule
+    const greetings = [
+        ["नमस्ते! बहुत दिन बाद दिखे। क्या सीन है?", `Hey ${name}! Bahut din baad dikhe. Kya scene hai?`],
+        ["सुनो, तुम्हें मिस किया! आज का दिन कैसा गया?", `Hi ${name}, miss kiya tumhe! Aaj ka din kaisa gaya?`],
+        ["यौ! बड़े दिनों बाद याद किया। सब ठीक?", `Yo ${name}! Bade dino baad yaad kiya. Sab theek?`],
+        ["ओए, कहाँ गायब थे? आज क्या प्लान है?", `Oye ${name}, kahan gayab the? Aaj kya plan hai?`],
+        ["हे! कैसे हो? बहुत दिन बाद दिखे।", "Hey! Kaise ho? Bahut din baad dikhe."]
+    ];
 
-// Choose a random greeting
-const pair = greetings[Math.floor(Math.random() * greetings.length)];
-return `"${pair[0]}"|||"${pair[1]}"`;
+    // Choose a random greeting
+    const pair = greetings[Math.floor(Math.random() * greetings.length)];
+    return `"${pair[0]}"|||"${pair[1]}"`;
 }
 
 module.exports = { getChatResponse, getProactiveGreeting, parseResponse };
