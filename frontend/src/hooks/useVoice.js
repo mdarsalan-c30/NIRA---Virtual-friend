@@ -21,18 +21,41 @@ export const useVoice = () => {
         let cleanText = text.replace(/\[(.*?)\]\((.*?)\)/g, "$1");
         // 2. Remove raw URLs
         cleanText = cleanText.replace(/https?:\/\/\S+/g, "");
-        // 3. Simple cleanup for extra spaces
+        // 3. Remove asterisks (common in AI bolding)
+        cleanText = cleanText.replace(/\*/g, "");
+        // 4. Normalize spaces
         return cleanText.trim();
     };
 
-    const splitTextIntoChunks = (text, maxLength = 450) => {
+    const splitTextIntoChunks = (text, maxLength = 250) => {
+        if (!text || text.length <= maxLength) return [text];
+
+        // Handle Hindi characters by splitting by sentences
         const sentences = text.match(/[^.।!?]+[.।!?]*/g) || [text];
         const chunks = [];
         let currentChunk = "";
 
-        for (const sentence of sentences) {
-            if ((currentChunk + sentence).length > maxLength) {
-                if (currentChunk) chunks.push(currentChunk.trim());
+        for (let sentence of sentences) {
+            if (sentence.length > maxLength) {
+                // If a single sentence is too long, split it by words or spaces
+                if (currentChunk) {
+                    chunks.push(currentChunk.trim());
+                    currentChunk = "";
+                }
+                const subPeriods = sentence.split(/[,،]/); // Split by comma as well
+                for (let sub of subPeriods) {
+                    if ((currentChunk + sub).length > maxLength && currentChunk) {
+                        chunks.push(currentChunk.trim());
+                        currentChunk = sub;
+                    } else {
+                        currentChunk += sub;
+                    }
+                }
+                continue;
+            }
+
+            if ((currentChunk + sentence).length > maxLength && currentChunk) {
+                chunks.push(currentChunk.trim());
                 currentChunk = sentence;
             } else {
                 currentChunk += sentence;
@@ -69,11 +92,14 @@ export const useVoice = () => {
                 let preferredVoice;
 
                 if (lang === 'hi') {
+                    // CRITICAL: Force Hindi voice and lang for fallback to avoid English accent
                     const hiVoices = voices.filter(v => v.lang.includes('hi'));
                     preferredVoice = hiVoices.find(v => v.name.includes(gender === 'male' ? 'Male' : 'Female')) || hiVoices[0];
+                    utterance.lang = 'hi-IN';
                 } else {
                     const enVoices = voices.filter(v => v.lang.includes('en'));
                     preferredVoice = enVoices.find(v => v.name.includes(gender === 'male' ? 'Male' : 'Female')) || enVoices[0];
+                    utterance.lang = 'en-IN';
                 }
 
                 if (preferredVoice) utterance.voice = preferredVoice;
@@ -108,7 +134,7 @@ export const useVoice = () => {
                     speaker: targetSpeaker
                 }, {
                     headers: { Authorization: `Bearer ${token}` },
-                    timeout: 20000
+                    timeout: 60000 // Boosted to 60s for long high-quality audio
                 });
 
                 if (response.data && response.data.audio) {

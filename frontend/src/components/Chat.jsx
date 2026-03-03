@@ -178,12 +178,37 @@ const Chat = () => {
                 });
 
                 if (response.data.response) {
-                    const greeting = response.data.response;
-                    setMessages([{ role: 'model', content: greeting }]);
-                    speak(greeting,
+                    const fullGreeting = response.data.response;
+                    let displayGreeting = fullGreeting;
+                    let speechGreeting = fullGreeting;
+
+                    if (fullGreeting) {
+                        try {
+                            // Extract JSON from potential code blocks
+                            const jsonStr = fullGreeting.replace(/```json|```/g, '').trim();
+                            const parsed = JSON.parse(jsonStr);
+                            speechGreeting = parsed.speech;
+                            displayGreeting = parsed.display;
+                        } catch (e) {
+                            if (fullGreeting.includes('|||')) {
+                                const parts = fullGreeting.split('|||');
+                                speechGreeting = parts[0].trim().replace(/^"|"$/g, '');
+                                displayGreeting = parts[1].trim().replace(/^"|"$/g, '');
+                            }
+                        }
+
+                        // Robustness fallback
+                        if (!speechGreeting) speechGreeting = displayGreeting;
+
+                        console.log("🗣️ Greeting Speech Part:", speechGreeting);
+                        console.log("📱 Greeting UI Part:", displayGreeting);
+                    }
+
+                    setMessages([{ role: 'model', content: displayGreeting }]);
+                    speak(speechGreeting,
                         () => setIsSpeaking(true),
                         () => setIsSpeaking(false),
-                        language,
+                        'hi', // Use Hindi accent for Devanagari part
                         selectedVoice,
                         persona === 'ali' ? 'male' : 'female'
                     );
@@ -245,19 +270,31 @@ const Chat = () => {
             let displayResponse = aiResponse;
             let speechResponse = aiResponse;
 
-            if (aiResponse && aiResponse.includes('|||')) {
-                const parts = aiResponse.split('|||');
-                speechResponse = parts[0].trim().replace(/^"|"$/g, ''); // Speech (Hindi)
-                displayResponse = parts[1].trim().replace(/^"|"$/g, ''); // UI (English Font)
-
-                // CRITICAL SAFETY: Remove any accidental English letters from speechResponse to avoid robotic accent
-                speechResponse = speechResponse.replace(/[a-zA-Z]/g, '');
-
-                console.log("🗣️ Speech Part (Devanagari):", speechResponse);
-                console.log("📱 UI Part (English):", displayResponse);
-            } else {
-                console.warn("⚠️ AI did not follow ||| format. Using raw response.");
+            try {
+                // Extract JSON from potential code blocks
+                const jsonStr = aiResponse.replace(/```json|```/g, '').trim();
+                const parsed = JSON.parse(jsonStr);
+                speechResponse = parsed.speech;
+                displayResponse = parsed.display;
+            } catch (e) {
+                if (aiResponse && aiResponse.includes('|||')) {
+                    const parts = aiResponse.split('|||');
+                    speechResponse = parts[0].trim().replace(/^"|"$/g, ''); // Speech (Devanagari)
+                    displayResponse = parts[1].trim().replace(/^"|"$/g, ''); // UI (Hinglish/Latin)
+                } else {
+                    speechResponse = aiResponse;
+                    displayResponse = aiResponse;
+                }
             }
+
+            // FINAL SYNC CHECK: If speech is way shorter than UI, it means AI failed the sync rule.
+            if (speechResponse && displayResponse && speechResponse.length < (displayResponse.length * 0.3)) {
+                console.warn("⚠️ Critical sync failure. Falling back to displayResponse for speech.");
+                speechResponse = displayResponse;
+            }
+
+            console.log("🗣️ Speech Part (Final):", speechResponse);
+            console.log("📱 UI Part (Hinglish):", displayResponse);
 
             setMessages(prev => [...prev, { role: 'model', content: displayResponse }]);
 
