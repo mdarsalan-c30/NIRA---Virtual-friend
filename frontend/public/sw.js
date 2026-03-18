@@ -31,27 +31,33 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-    // Skip caching for non-GET requests or external APIs if needed
     if (event.request.method !== 'GET') return;
+
+    // NETWORK FIRST for navigation requests (index.html) to prevent being stuck on a stale shell
+    if (event.request.mode === 'navigate') {
+        event.respondWith(
+            fetch(event.request)
+                .catch(() => caches.match('/index.html'))
+        );
+        return;
+    }
 
     event.respondWith(
         caches.match(event.request)
             .then(response => {
-                // Return cached version or fetch from network
-                return response || fetch(event.request).then(fetchRes => {
-                    return caches.open(CACHE_NAME).then(cache => {
-                        // Don't cache everything, just main assets if they are from our origin
-                        if (event.request.url.startsWith(self.location.origin)) {
-                            // cache.put(event.request, fetchRes.clone());
-                        }
-                        return fetchRes;
-                    });
+                if (response) return response;
+                
+                return fetch(event.request).then(fetchRes => {
+                    // Only cache assets from our own origin
+                    if (event.request.url.startsWith(self.location.origin) && fetchRes.status === 200) {
+                        const resClone = fetchRes.clone();
+                        caches.open(CACHE_NAME).then(cache => {
+                            // Optionally cache other assets here if desired
+                            // cache.put(event.request, resClone);
+                        });
+                    }
+                    return fetchRes;
                 });
-            }).catch(() => {
-                // Offline fallback could go here
-                if (event.request.mode === 'navigate') {
-                    return caches.match('/index.html');
-                }
             })
     );
 });

@@ -35,16 +35,37 @@ if ('serviceWorker' in navigator) {
 }
 
 // Handle "Failed to load module script" errors (MIME type mismatch on stale cache)
-window.addEventListener('error', (e) => {
+window.addEventListener('error', async (e) => {
   if (e.message.includes('MIME type') || (e.target && e.target.tagName === 'SCRIPT')) {
     const lastRefresh = localStorage.getItem('last_mime_refresh');
     const now = Date.now();
 
-    // Only refresh if we haven't refreshed in the last 10 seconds (avoid infinite loops)
-    if (!lastRefresh || (now - parseInt(lastRefresh)) > 10000) {
-      console.warn('⚠️ Module load failure detected. Performing recovery refresh...');
+    // Only attempt recovery if we haven't tried in the last 15 seconds
+    if (!lastRefresh || (now - parseInt(lastRefresh)) > 15000) {
+      console.warn('⚠️ NYRA Core failure detected. Executing self-healing recovery...');
       localStorage.setItem('last_mime_refresh', now.toString());
-      window.location.reload(true); // true forces a reload from server if supported
+
+      try {
+        // 1. Unregister all service workers
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (const registration of registrations) {
+            await registration.unregister();
+          }
+        }
+        // 2. Clear all caches
+        if ('caches' in window) {
+          const cacheNames = await caches.keys();
+          for (const cacheName of cacheNames) {
+            await caches.delete(cacheName);
+          }
+        }
+      } catch (err) {
+        console.error('Self-healing failed:', err);
+      }
+
+      // 3. Force a complete reload from the server
+      window.location.reload(true);
     }
   }
 }, true);

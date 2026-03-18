@@ -572,6 +572,26 @@ const Chat = () => {
                                 <div style={{ flex: 1, textAlign: 'center' }}><div style={{ color: 'white', fontWeight: 800 }}>{stats.days}</div><div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)' }}>DAYS</div></div>
                                 <div style={{ flex: 1, textAlign: 'center' }}><div style={{ color: 'white', fontWeight: 800 }}>{stats.interactions}</div><div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)' }}>HITS</div></div>
                             </div>
+                            
+                            <button 
+                                onClick={async () => {
+                                    if(window.confirm('This will clear app cache and reload. Solve blank screen issues?')) {
+                                        if ('serviceWorker' in navigator) {
+                                            const regs = await navigator.serviceWorker.getRegistrations();
+                                            for(let r of regs) await r.unregister();
+                                        }
+                                        if ('caches' in window) {
+                                            const keys = await caches.keys();
+                                            for(let k of keys) await caches.delete(k);
+                                        }
+                                        window.location.reload(true);
+                                    }
+                                }}
+                                style={{ padding: '15px', borderRadius: '15px', border: '1px solid #6366f1', color: '#6366f1', background: 'none', fontWeight: 700, fontSize: '0.8rem' }}
+                            >
+                                🔄 FORCE REFRESH / CLEAR CACHE
+                            </button>
+
                             <button onClick={() => auth.signOut()} style={{ padding: '15px', borderRadius: '15px', border: '1px solid #ef4444', color: '#ef4444', background: 'none', fontWeight: 700 }}>SIGN OUT</button>
                         </div>
                     </div>
