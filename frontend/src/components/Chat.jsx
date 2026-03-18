@@ -8,10 +8,20 @@ import logo from '../assets/logo.png';
 
 const LinkPreview = ({ text }) => {
     if (!text) return null;
-    const linkMatch = text.match(/\[(.*?)\]\((.*?)\)/);
-    if (!linkMatch) return null;
+    let linkMatch = text.match(/\[(.*?)\]\((.*?)\)/);
+    let title, url;
 
-    const [title, url] = [linkMatch[1], linkMatch[2]];
+    if (linkMatch) {
+        [title, url] = [linkMatch[1], linkMatch[2]];
+    } else {
+        const urlMatch = text.match(/(https?:\/\/[^\s]+)/);
+        if (urlMatch) {
+            url = urlMatch[1];
+            title = "Found Link";
+        }
+    }
+
+    if (!url) return null;
     const isYoutube = url.includes('youtube.com') || url.includes('youtu.be');
 
     return (
@@ -681,12 +691,20 @@ const Chat = () => {
                                     border: msg.role === 'error' ? '1px solid #ef4444' : '1px solid rgba(255,255,255,0.05)',
                                     display: 'flex', flexDirection: 'column', gap: '10px'
                                 }}>
-                                    <div>{msg.content.split(/(\[.*?\]\(.*?\))/g).map((part, index) => {
-                                        const match = part.match(/\[(.*?)\]\((.*?)\)/);
-                                        if (match) {
+                                    <div>{msg.content.split(/(\[.*?\]\(.*?\)|https?:\/\/[^\s]+)/g).map((part, index) => {
+                                        const mdMatch = part.match(/\[(.*?)\]\((.*?)\)/);
+                                        if (mdMatch) {
                                             return (
-                                                <a key={index} href={match[2]} target="_blank" rel="noopener noreferrer" style={{ color: '#8b5cf6', textDecoration: 'underline', fontWeight: 600 }}>
-                                                    {match[1]}
+                                                <a key={index} href={mdMatch[2]} target="_blank" rel="noopener noreferrer" style={{ color: '#8b5cf6', textDecoration: 'underline', fontWeight: 600 }}>
+                                                    {mdMatch[1]}
+                                                </a>
+                                            );
+                                        }
+                                        const urlMatch = part.match(/(https?:\/\/[^\s]+)/);
+                                        if (urlMatch) {
+                                            return (
+                                                <a key={index} href={urlMatch[1]} target="_blank" rel="noopener noreferrer" style={{ color: '#8b5cf6', textDecoration: 'underline', fontWeight: 600 }}>
+                                                    {urlMatch[1]}
                                                 </a>
                                             );
                                         }

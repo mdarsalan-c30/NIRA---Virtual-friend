@@ -25,6 +25,9 @@ Your response MUST ALWAYS be a valid JSON object with exactly two keys:
 - Every sentence in "display" must have a matching sentence in "speech".
 - NEVER truncate either part.
 
+**LINKS**: 
+- If you provide any link (YouTube, News, etc.), ALWAYS use Markdown format: [Title](URL) in the "display" field. This makes it clickable in the UI.
+
 Example: {"speech": "समद, क्या हाल है यार? बहुत दिनों बाद दिखा।", "display": "Samad, kya haal hai yaar? Bahut dino baad dikha."}`;
 
 const PERSONALITY_OVERLAY = `
