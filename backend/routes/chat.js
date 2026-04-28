@@ -40,6 +40,14 @@ router.post('/', async (req, res) => {
 
         // Basic logging
         const batch = db.batch();
+        
+        // Update user stats
+        batch.set(profileRef, {
+            lastActive: admin.firestore.FieldValue.serverTimestamp(),
+            totalInteractions: admin.firestore.FieldValue.increment(1),
+            usageMinutes: admin.firestore.FieldValue.increment(0.5)
+        }, { merge: true });
+
         const userMsgRef = profileRef.collection('conversations').doc();
         batch.set(userMsgRef, {
             role: 'user',

@@ -115,6 +115,10 @@ const AdminDashboard = () => {
                                             <div style={{ width: `${Math.min(((u.usageMinutes || 0) / 5) * 100, 100)}%`, height: '100%', background: (u.usageMinutes || 0) >= 5 ? '#ef4444' : '#6366f1', borderRadius: '2px' }} />
                                         </div>
                                     </div>
+                                    <div style={{ flex: 1, fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)' }}>
+                                        <div><span style={{color: 'rgba(255,255,255,0.4)'}}>Joined:</span> {u.createdAt?.toDate ? u.createdAt.toDate().toLocaleString('en-IN') : 'N/A'}</div>
+                                        <div><span style={{color: 'rgba(255,255,255,0.4)'}}>Active:</span> {u.lastActive?.toDate ? u.lastActive.toDate().toLocaleString('en-IN') : 'N/A'}</div>
+                                    </div>
                                     <button
                                         onClick={async () => {
                                             const userRef = doc(db, 'users', u.id);
