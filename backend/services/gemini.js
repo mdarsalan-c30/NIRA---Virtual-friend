@@ -75,7 +75,7 @@ async function getChatResponse(userMessage, memory, image = null, globalSettings
     if (geminiKey) {
         try {
             const genAI = new GoogleGenerativeAI(geminiKey);
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
             const prompt = `${SYSTEM_PROMPT}\n\n${PERSONALITY_OVERLAY}\n\nCONTEXT (Use this to be a real friend):\n${contextStr}\n\nUser's Message: ${userMessage}`;
             const result = await model.generateContent(prompt);
             return result.response.text().trim();
@@ -93,7 +93,7 @@ async function getChatResponse(userMessage, memory, image = null, globalSettings
 
             const completion = await groq.chat.completions.create({
                 messages: [{ role: "user", content: prompt }],
-                model: "llama-3.3-70b-versatile",
+                model: "llama-3.1-70b-versatile",
             });
             return completion.choices[0].message.content;
         } catch (err) {
