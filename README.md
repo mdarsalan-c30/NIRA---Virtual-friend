@@ -6,11 +6,12 @@
 
 ## 🚀 Key Features
 
-- **🧠 Advanced Multi-LLM Brain**: Primary reasoning via Google Gemini 1.5 Pro, with an automated high-speed fallback to Groq (Llama 3.3 70B) to ensure zero downtime.
+- **🧠 Advanced Multi-LLM Brain**: Primary reasoning via Google Gemini, with an automated high-speed fallback to Groq to ensure zero downtime.
 - **💾 Persistent Memory**: Full integration with Firebase Firestore. NYRA remembers your name, your mood, and past conversations, making every interaction feel personal.
 - **🌐 Real-Time Web Awareness**: Integrated with Tavily API. NYRA can search the web for the latest news, weather, or YouTube videos on command.
 - **🗣️ Human-Like Speech**: High-fidelity Text-to-Speech via Sarvam AI, featuring natural Hindi/Hinglish accents with localized personas.
 - **📱 3D Immersive UI**: A reactive 3D avatar layer that responds to speech, thinking states, and emotional shifts in real-time.
+- **🔄 Auto-Failover System**: Ensures continuous uptime by automatically routing to fallback AI models if the primary network is busy.
 - **💬 Proactive Engagement**: NYRA doesn't just wait; she initiates conversations based on her memory and your shared history.
 
 ---
